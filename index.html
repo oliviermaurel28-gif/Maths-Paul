@@ -7,11 +7,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Maths Quest">
 <meta name="color-scheme" content="light dark">
-<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Maths Quest Seconde</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Maths Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
+:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+
 /* Layout: cahier à petits carreaux ; une colonne d'écrans (accueil → monde → partie → résultat), clavier maths fixé en bas pendant une partie */
 :root{
   --paper:#F2F5FA; --grid:rgba(52,92,170,.10); --ink:#16213A; --muted:#5B6787; --card:#FFFFFF; --line:#D3DCEB;
@@ -179,13 +183,103 @@ details.it .qtext{font-size:16px}
 .copied{color:var(--good);font-weight:700;text-align:center;margin:0}
 .small{font-size:14px;color:var(--muted);margin:0}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
-</style>
 
+/* ---------- v2 : comptes, entraînement, espace parent ---------- */
+#app.wide{max-width:1040px}
+a{color:var(--w4)}
+.linkbtn{font-size:inherit;color:var(--w4);text-decoration:underline;padding:6px 2px}
+.foot a{color:var(--w4)}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{font-size:20px}
+.form{display:flex;flex-direction:column;gap:8px}
+.form label{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.form input,.form select{box-sizing:border-box;font:inherit;font-size:17px;min-height:48px;border-radius:10px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);padding:0 12px;width:100%;min-width:0}
+.form input:focus-visible,.form select:focus-visible{outline:3px solid var(--w4);outline-offset:1px}
+.form.inline{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end;gap:10px}
+.form.inline .btn,.form.inline .warn{grid-column:1/-1}
+.codein{font-family:var(--f-math);font-size:28px!important;letter-spacing:.3em;text-align:center;text-transform:uppercase}
+.screen.narrow{max-width:460px;margin:0 auto}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{min-height:40px;padding:0 16px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-weight:700}
+.tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.train{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--ink);color:var(--paper);border-radius:14px;padding:14px 16px;box-shadow:0 3px 0 rgba(0,0,0,.25)}
+.train:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.train.busy{opacity:.6}
+.train .tt{font-family:var(--f-display);font-size:22px}
+.train .ts{font-size:14px;opacity:.85}
+.train .th{font-size:13px;opacity:.75;overflow-wrap:anywhere}
+
+/* espace parent */
+.screen.pwide{gap:16px}
+.ptop{display:flex;flex-direction:column;gap:6px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:44px;padding:0 16px;border-radius:999px;background:var(--card);border:1.5px solid var(--line);font-weight:700}
+.chip small{color:var(--muted);font-weight:400}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.on small{color:var(--paper);opacity:.8}
+.chip.add{border-style:dashed;color:var(--muted)}
+.pr{display:flex;justify-content:space-between;align-items:center}
+.ptitle{font-size:30px}
+.ptitle small{font-size:16px;color:var(--muted);font-family:var(--f-body)}
+.codebig{font-family:var(--f-math);font-weight:700;font-size:40px;letter-spacing:.25em;margin:0;overflow-wrap:anywhere}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.kpi b{font-family:var(--f-display);font-weight:400;font-size:28px;font-variant-numeric:tabular-nums}
+.kpi em{font-style:normal;font-size:13px}
+.up{color:var(--good);font-weight:700}
+.down{color:var(--bad);font-weight:700}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.pgrid .span2{grid-column:1/-1}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px 6px 0;white-space:nowrap}
+td{padding:8px 10px 8px 0;border-top:1px solid var(--line);vertical-align:top}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--key-alt);color:var(--muted);margin:1px 2px 1px 0;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.mid{background:rgba(217,130,0,.16);color:var(--w2)}
+.chart{width:100%;height:auto;max-height:260px}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .gt{fill:var(--muted);font-size:12px;font-family:var(--f-body)}
+.chart .ln{fill:none;stroke:var(--w4);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.chart .dt{fill:var(--muted);opacity:.55}
+.pace,.seances,.flist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pace li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:baseline}
+.pace li small,.pace li .pill{grid-column:1/-1}
+.pace li b{font-variant-numeric:tabular-nums}
+.note{margin:0;font-size:14px;background:var(--bad-bg);color:var(--ink);border-left:4px solid var(--bad);border-radius:8px;padding:8px 10px}
+.bars{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bars li{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:14px}
+.bars li i{grid-column:1/-1;height:8px;border-radius:4px;background:var(--bad);display:block}
+.bars li b{font-variant-numeric:tabular-nums}
+.wprog{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.wprog li{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:14px}
+.wl{display:flex;gap:4px}
+.wl i{width:22px;height:12px;border-radius:4px;background:var(--gold-dim);display:block}
+.wl i.boss{width:30px}
+.wl i.s1{background:#C99700}.wl i.s2{background:#E4AA00}.wl i.s3{background:var(--gold)}
+.seances li{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:baseline;font-size:14px;border-top:1px solid var(--line);padding-top:8px}
+.seances li:first-child{border-top:0;padding-top:0}
+.seances li span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.seances small{color:var(--muted);font-variant-numeric:tabular-nums}
+.flist li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:baseline;font-size:14px}
+.flist small{color:var(--muted)}
+@media (max-width:480px){
+  .seances li{grid-template-columns:1fr auto;}
+  .seances li span:first-child{grid-column:1/-1;color:var(--muted);font-size:12px}
+  .seances small{display:none}
+  .codebig{font-size:32px}
+}
+
+.totstars{white-space:nowrap}
+</style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
+
 /* =====================================================================
    OUTILS MATHS
    ===================================================================== */
@@ -456,58 +550,245 @@ const WORLDS=[
   {name:'Le Sphinx des Courbes',kind:'boss',gens:[W4.fg,W4.sqIneq,W4.ineq1,W4.eq3,W4.nbSol,W4.img1,W4.ante1,W4.eq1,W4.fg,W4.sqIneq]}]}
 ];
 
+
 /* =====================================================================
-   MOTEUR DE JEU
+   CATALOGUE, MOTEUR ET ANALYSE (sans DOM : testable)
    ===================================================================== */
+['ens','arith','calc','fonc'].forEach((id,i)=>{WORLDS[i].id=id});
+/* Un paquet de contenu par matière et par niveau : CURRICULA.<matière>.<niveau> = liste de mondes.
+   Pour ajouter l'histoire-géo de 5e : CURRICULA.histgeo={label:'Histoire-géo','5e':[...]} */
+const CURRICULA={maths:{label:'Maths','2nde':WORLDS}};
+const subjectsFor=n=>Object.keys(CURRICULA).filter(s=>CURRICULA[s][n]);
 const N_Q=10;
 function buildQuestions(spec){
   let gens=[];while(gens.length<N_Q)gens=gens.concat(shuffle(spec.gens));gens=gens.slice(0,N_Q);
   const seen=new Set();const qs=gens.map(g=>{let q;for(let t=0;t<8;t++){try{q=g(spec.kind)}catch(e){q=null}if(q&&!seen.has(q.q))break}seen.add(q.q);return q});
   return spec.kind==='easy'?qs:shuffle(qs)}
 const starsFor=(kind,score,errs,alive)=>kind==='boss'?(alive?3-errs:0):score>=10?3:score>=9?2:score>=8?1:0;
-
-if(typeof document!=='undefined'){
-const KEY='mathsquest.v1';
-let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=Object.assign({stars:{},best:{},errors:{},sessions:[]},S||{});
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-const app=document.getElementById('app');
-const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const rawHtml=s=>esc(s).replace(/\^\(?(-?[0-9x]+)\)?/g,'<sup>$1</sup>');
+
+/* ----- Analyse des réponses ----- */
+const DAY=864e5;
+const REF={easy:60,hard:90,boss:120};          // repère de rythme, en secondes par question
+function median(a){if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);const h=s.length>>1;return s.length%2?s[h]:(s[h-1]+s[h])/2}
+function buildSkillIndex(worlds){
+  const idx=new Map(),seen=new Set();
+  worlds.forEach(w=>w.levels.forEach(l=>l.gens.forEach(g=>{
+    if(seen.has(g))return;seen.add(g);const sk=new Set();
+    for(let i=0;i<4;i++){try{const q=g('hard');if(q&&q.skill)sk.add(q.skill)}catch(e){}}
+    sk.forEach(s=>{if(!idx.has(s))idx.set(s,[]);idx.get(s).push(g)})})));
+  return idx}
+/* rows : {skill, ok, tag, time_s, at, kind}  ->  une entrée par compétence */
+function analyse(rows,skillSet,now=Date.now()){
+  const by=new Map();
+  for(const r of rows){
+    const key=(!r.ok&&r.tag&&skillSet.has(r.tag))?r.tag:r.skill;
+    const t=new Date(r.at).getTime();if(!isFinite(t))continue;
+    const w=Math.pow(.5,Math.max(0,(now-t)/DAY)/14);
+    let o=by.get(key);if(!o){o={key,n:0,w:0,e:0,rows:[],last:0};by.set(key,o)}
+    o.n++;o.w+=w;if(!r.ok)o.e+=w;o.rows.push({ok:r.ok,t,time:+r.time_s||0,kind:r.kind||'hard'});if(t>o.last)o.last=t}
+  const out=[];
+  by.forEach(o=>{
+    o.rows.sort((a,b)=>b.t-a.t);
+    let streak=0;const days=new Set();
+    for(const r of o.rows){if(!r.ok)break;streak++;days.add(new Date(r.t).toDateString())}
+    o.errs=o.rows.filter(r=>!r.ok).length;
+    o.rate=(o.e+0.6)/(o.w+4);                      // taux d'erreur récent, lissé
+    o.streak=streak;o.mastered=streak>=5&&days.size>=2;
+    o.recentErr=o.rows.some(r=>!r.ok&&now-r.t<21*DAY);
+    o.weak=!o.mastered&&o.w>=1.5&&o.rate>=0.25;
+    o.consolidate=!o.weak&&!o.mastered&&o.recentErr&&streak>=2;
+    o.stale=now-o.last>7*DAY;
+    const rec=o.rows.filter(r=>now-r.t<14*DAY),prev=o.rows.filter(r=>now-r.t>=14*DAY&&now-r.t<28*DAY);
+    const er=a=>a.filter(r=>!r.ok).length/a.length;
+    o.trend=(rec.length>=3&&prev.length>=3)?(er(rec)-er(prev)<=-.15?'mieux':er(rec)-er(prev)>=.15?'pire':'stable'):'';
+    o.medTime=median(o.rows.map(r=>r.time));
+    o.ratio=median(o.rows.map(r=>r.time/REF[r.kind||'hard']));
+    o.slow=o.n>=4&&o.ratio>1.6;
+    o.rushed=o.n>=6&&o.ratio<0.4&&o.errs/o.n>0.3;
+    out.push(o)});
+  return out}
+/* Répartition des 10 questions de l'entraînement du jour */
+function planTraining(an,focus,skills,n=10){
+  const weak=an.filter(o=>o.weak).sort((a,b)=>b.rate-a.rate).map(o=>o.key).filter(k=>skills.includes(k));
+  const f=focus.filter(s=>skills.includes(s));
+  const targets=[...new Set([...f.slice(0,2),...weak])].slice(0,3);
+  const plan=[];
+  if(targets.length)for(let i=0;i<6;i++)plan.push(targets[i%targets.length]);
+  const seen=new Set(an.map(o=>o.key));
+  const cons=an.filter(o=>o.consolidate||(o.mastered&&o.recentErr)).map(o=>o.key).filter(k=>skills.includes(k)&&!targets.includes(k));
+  const rev=an.filter(o=>o.stale&&!o.weak).map(o=>o.key).filter(k=>skills.includes(k)&&!targets.includes(k));
+  const fresh=skills.filter(s=>!seen.has(s));
+  const take=(arr,k)=>{const a=shuffle(arr);const r=[];for(let i=0;a.length&&i<k;i++)r.push(a[i%a.length]);return r};
+  plan.push(...take(cons,2));
+  plan.push(...take(rev.length?rev:fresh,2));
+  const pool=shuffle([...fresh,...skills]);let i=0;
+  while(plan.length<n&&pool.length)plan.push(pool[i++%pool.length]);
+  return{plan:plan.slice(0,n),targets}}
+function trainQuestions(plan,idx){
+  const seen=new Set(),qs=[];
+  for(const sk of plan){const gens=idx.get(sk);if(!gens)continue;let q=null;
+    for(let t=0;t<10;t++){try{q=pick(gens)('hard')}catch(e){q=null}if(q&&q.skill===sk&&!seen.has(q.q))break;q=null}
+    if(q){seen.add(q.q);qs.push(q)}}
+  return shuffle(qs)}
+
+/* ----- Réseau ----- */
+const SB_URL='https://zydvsswgjrfbznbiomsw.supabase.co';
+const SB_KEY='sb_publishable_pZtTITm2n30o7ipyOJjUIg_BhwP4s3P';
+async function sb(path,o={}){
+  const h={apikey:SB_KEY};
+  if(o.body!==undefined)h['Content-Type']='application/json';
+  if(o.token)h.Authorization='Bearer '+o.token;
+  if(o.prefer)h.Prefer=o.prefer;
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),o.timeout||9000);
+  let res;
+  try{res=await fetch(SB_URL+path,{method:o.method||'GET',headers:h,body:o.body!==undefined?JSON.stringify(o.body):undefined,signal:ctl.signal})}
+  catch(e){clearTimeout(to);const er=new Error('réseau');er.net=true;throw er}
+  clearTimeout(to);
+  const txt=await res.text();let data=null;try{data=txt?JSON.parse(txt):null}catch(e){data=txt}
+  if(!res.ok){const er=new Error((data&&(data.message||data.msg||data.error_description||data.error))||('HTTP '+res.status));er.status=res.status;er.data=data;throw er}
+  return data}
+async function fetchAll(path,token){
+  let out=[];for(let off=0;off<5000;off+=1000){
+    const page=await sb(path+(path.includes('?')?'&':'?')+`limit=1000&offset=${off}`,{token});
+    out=out.concat(page);if(page.length<1000)break}
+  return out}
+
+/* =====================================================================
+   INTERFACE : profils, parties, synchro, espace parent
+   ===================================================================== */
+if(typeof document!=='undefined'){
+const app=document.getElementById('app');
+
+/* ----- État local (sur le téléphone) ----- */
+const LSK='mq.v2';
+let ST={profile:null,subject:'maths',data:{},migrated:false};
+try{const s=JSON.parse(localStorage.getItem(LSK));if(s&&typeof s==='object')ST=Object.assign(ST,s)}catch(e){}
+const saveST=()=>{try{localStorage.setItem(LSK,JSON.stringify(ST))}catch(e){}};
+const PD=()=>{const id=ST.profile.id;return ST.data[id]||(ST.data[id]={stars:{},best:{},errors:{},sessions:[],queue:[],stats:[]})};
+const cur=()=>(CURRICULA[ST.subject]||{})[ST.profile.niveau]||[];
+const kid=(wi,li)=>wi+'-'+li;
+const starsMap=()=>{const d=PD();return d.stars[ST.subject]||(d.stars[ST.subject]={})};
+const bestMap=()=>{const d=PD();return d.best[ST.subject]||(d.best[ST.subject]={})};
+const unlocked=(wi,li)=>li===0||(starsMap()[kid(wi,li-1)]||0)>=1;
+const totals=()=>{let t=0,m2=0;cur().forEach((w,wi)=>w.levels.forEach((l,li)=>{t+=starsMap()[kid(wi,li)]||0;m2+=3}));return[t,m2]};
+const IDX={};
+const getIdx=()=>{const k=ST.subject+'|'+ST.profile.niveau;return IDX[k]||(IDX[k]=buildSkillIndex(cur()))};
+let G=null;
+
 const star=on=>`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" fill="${on?'var(--gold)':'var(--gold-dim)'}"/></svg>`;
 const starsRow=n=>`<span class="stars" aria-label="${n||0} étoile(s) sur 3">${[0,1,2].map(i=>star(i<(n||0))).join('')}</span>`;
 const heart=on=>`<svg viewBox="0 0 24 24" class="${on?'':'lost'}" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.5 5c2 0 3.6 1.2 5.5 3.2C13.9 6.2 15.5 5 17.5 5 21 5 23.1 8.5 21.6 11.8 19.5 16.4 12 21 12 21z" fill="var(--bad)"/></svg>`;
-const kid=(w,l)=>w+'-'+l;
-const unlocked=(w,l)=>l===0||(S.stars[kid(w,l-1)]||0)>=1;
-const totals=()=>{let t=0,mx=0;WORLDS.forEach((w,wi)=>w.levels.forEach((l,li)=>{t+=S.stars[kid(wi,li)]||0;mx+=3}));return[t,mx]};
-let G=null;
+const toast=t=>{const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1400)};
+const fmtMin=s=>s<90?Math.round(s)+' s':Math.round(s/60)+' min';
 
+/* ----- Reprise de l'ancienne version (progression gardée dans le navigateur) ----- */
+function migrate(){
+  if(ST.migrated||ST.profile.niveau!=='2nde')return;
+  try{const old=JSON.parse(localStorage.getItem('mathsquest.v1'));
+    if(old&&old.stars){const d=PD();if(!Object.keys(d.stars.maths||{}).length){d.stars.maths=old.stars;d.best.maths=old.best||{};d.errors=old.errors||{}}}}catch(e){}
+  ST.migrated=true}
+
+/* ----- Synchronisation vers Supabase ----- */
+let flushing=false;
+async function flush(){
+  if(flushing||!ST.profile)return;const d=PD();if(!d.queue.length)return;flushing=true;
+  try{while(d.queue.length){
+    const {at,...payload}=d.queue[0];
+    try{await sb('/rest/v1/rpc/mq_submit',{method:'POST',body:{p_profile:ST.profile.id,p_code:ST.profile.code,p_attempt:payload}})}
+    catch(e){
+      if(e.net)throw e;
+      if(/code invalide/.test(e.message)){ST.syncErr='code';throw e}
+      d.dropped=(d.dropped||0)+1}                      // donnée refusée : on ne bloque pas le reste
+    d.queue.shift();ST.syncErr='';saveST()}}
+  catch(e){}
+  flushing=false;saveST();
+  if(document.querySelector('[data-sync]'))document.querySelectorAll('[data-sync]').forEach(el=>el.innerHTML=syncText())}
+const syncText=()=>{const n=ST.profile?PD().queue.length:0;return ST.syncErr==='code'?'Code joueur refusé : ressaisis-le (Changer de joueur).':n?`${n} partie${n>1?'s':''} à envoyer`:'Résultats envoyés ✓'};
+window.addEventListener('online',()=>flush());
+
+/* ----- Connexion d'un enfant ----- */
+function loginView(msg){
+  app.className='';
+  app.innerHTML=`<div class="screen"><header class="hero"><p class="eyebrow">Révisions</p><h1>Maths <span>Quest</span></h1><p class="sub">Entre ton code joueur pour commencer.</p></header>
+   <form id="lf" class="card form" autocomplete="off"><label for="code">Code joueur</label>
+    <input id="code" class="codein" maxlength="6" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="A1B2C3" aria-describedby="lmsg">
+    <p class="warn" id="lmsg" role="status">${esc(msg||'')}</p>
+    <button class="btn world" style="--wc:var(--w4)" type="submit">C'est parti</button></form>
+   <p class="foot">Pas de code ? Demande-le à tes parents.<br><a href="#parent">Espace parent</a></p></div>`;
+  const msgEl=document.getElementById('lmsg');
+  document.getElementById('lf').addEventListener('submit',async e=>{
+    e.preventDefault();const code=document.getElementById('code').value.trim().toUpperCase();
+    if(code.length<4){msgEl.textContent='Tape les 6 caractères de ton code.';return}
+    const btn=e.target.querySelector('button');btn.disabled=true;msgEl.textContent='';
+    try{const r=await sb('/rest/v1/rpc/mq_login',{method:'POST',body:{p_code:code}});
+      if(!r||!r.length){msgEl.textContent='Code inconnu. Vérifie les caractères.';btn.disabled=false;return}
+      ST.profile={id:r[0].id,code,prenom:r[0].prenom,niveau:r[0].niveau};
+      ST.subject=subjectsFor(r[0].niveau)[0]||'maths';migrate();saveST();flush();home()}
+    catch(er){msgEl.textContent=er.net?'Pas de connexion. Réessaie.':er.status===404?"La base n'est pas encore prête (script SQL à lancer).":'Un souci est survenu. Réessaie.';btn.disabled=false}});
+}
+
+/* ----- Accueil ----- */
+function localRows(){return PD().stats||[]}
 function home(){
-  G=null;const[t,mxs]=totals();
+  G=null;app.className='';const p=ST.profile,worlds=cur(),subs=subjectsFor(p.niveau);
+  if(!worlds.length){app.innerHTML=`<div class="screen"><header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>Bientôt <span>prêt</span></h1><p class="sub">Le programme de ${esc(p.niveau)} n'est pas encore dans l'appli. Il arrive.</p></header><button class="btn ghost" data-act="logout">Changer de joueur</button></div>`;return}
+  const[t,mxs]=totals();const rows=localRows();
+  const an=analyse(rows,new Set(getIdx().keys()));
+  const tg=an.filter(o=>o.weak).sort((a,b)=>b.rate-a.rate).slice(0,3).map(o=>o.key);
+  const hint=rows.length<15?"Un mélange de tout pour s'échauffer":tg.length?'Au programme : '+tg.join(', '):"Rien d'urgent : on révise un peu de tout";
   app.innerHTML=`<div class="screen">
-   <header class="hero"><p class="eyebrow">Seconde · Révisions</p><h1>Maths <span>Quest</span></h1><p class="sub">Quatre mondes, cinq niveaux chacun, et un boss au bout.</p>
+   <header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>Maths <span>Quest</span></h1><p class="sub">Quatre mondes, cinq niveaux chacun, et un boss au bout.</p>
     <div class="totstars">${star(true)}<b>${t}</b> / ${mxs} étoiles</div></header>
-   <div class="worlds">${WORLDS.map((w,wi)=>{const st=w.levels.reduce((s,l,li)=>s+(S.stars[kid(wi,li)]||0),0);
-     return `<button class="wcard" style="--wc:${w.color}" data-act="world" data-w="${wi}"><span class="glyph">${w.glyph}</span><span class="meta"><span class="chap">${w.chap}</span><h2>${w.name}</h2><span class="segs">${w.levels.map((l,li)=>`<i class="${(S.stars[kid(wi,li)]||0)>=1?'on':''} ${l.kind==='boss'?'boss':''}"></i>`).join('')}</span><span class="count">${st} / ${w.levels.length*3} étoiles</span></span></button>`}).join('')}</div>
-   <button class="btn ghost" data-act="bilan">Envoyer mon bilan</button>
-   <p class="foot">8/10 au minimum pour débloquer le niveau suivant.</p></div>`;scrollTo(0,0)}
+   ${subs.length>1?`<div class="tabs">${subs.map(s=>`<button class="tab ${s===ST.subject?'on':''}" data-act="subject" data-s="${s}">${esc(CURRICULA[s].label)}</button>`).join('')}</div>`:''}
+   <button class="train" data-act="train"><span class="tt">Entraînement du jour</span><span class="ts">10 questions choisies pour toi</span><span class="th">${esc(hint)}</span></button>
+   <div class="worlds">${worlds.map((w,wi)=>{const st=w.levels.reduce((s,l,li)=>s+(starsMap()[kid(wi,li)]||0),0);
+     return `<button class="wcard" style="--wc:${w.color}" data-act="world" data-w="${wi}"><span class="glyph">${w.glyph}</span><span class="meta"><span class="chap">${w.chap}</span><h2>${w.name}</h2><span class="segs">${w.levels.map((l,li)=>`<i class="${(starsMap()[kid(wi,li)]||0)>=1?'on':''} ${l.kind==='boss'?'boss':''}"></i>`).join('')}</span><span class="count">${st} / ${w.levels.length*3} étoiles</span></span></button>`}).join('')}</div>
+   <button class="btn ghost" data-act="bilan">Mon bilan</button>
+   <p class="foot" data-sync>${syncText()}</p>
+   <p class="foot">8/10 au minimum pour débloquer le niveau suivant.<br><button class="linkbtn" data-act="logout">Changer de joueur</button></p></div>`;scrollTo(0,0)}
 
 function world(wi){
-  G=null;const w=WORLDS[wi];
+  G=null;const w=cur()[wi];
   app.innerHTML=`<div class="screen" style="--wc:${w.color}">
    <div class="top"><button class="back" data-act="home" aria-label="Retour">←</button><p class="eyebrow">${w.chap}</p></div>
    <div class="wbanner"><p class="eyebrow">Monde ${wi+1}</p><h2>${w.name}</h2></div>
-   <div class="trail">${w.levels.map((l,li)=>{const un=unlocked(wi,li),st=S.stars[kid(wi,li)];const boss=l.kind==='boss';
+   <div class="trail">${w.levels.map((l,li)=>{const un=unlocked(wi,li),st=starsMap()[kid(wi,li)];const boss=l.kind==='boss';
      const icon=!un?'<span>🔒</span>':boss?'<span>☠</span>':`<span>${li+1}</span>`;
      return `<button class="lvl ${boss?'boss':''} ${!un?'locked':st>=1?'done':''}" ${un?`data-act="start" data-w="${wi}" data-l="${li}"`:'aria-disabled="true"'}>
       <span class="node">${icon}</span><span class="info"><h3>${l.name}</h3><span class="tagrow"><span class="tag ${l.kind}">${l.kind==='easy'?'Facile':l.kind==='hard'?'Difficile':'Boss · 3 vies'}</span>${st!=null?starsRow(st):''}</span>
-      ${!un?`<span class="small">Fais 8/10 au niveau précédent</span>`:S.best[kid(wi,li)]?`<span class="small">Meilleur : ${S.best[kid(wi,li)]}</span>`:''}</span></button>`}).join('')}</div></div>`;scrollTo(0,0)}
+      ${!un?`<span class="small">Fais 8/10 au niveau précédent</span>`:bestMap()[kid(wi,li)]?`<span class="small">Meilleur : ${bestMap()[kid(wi,li)]}</span>`:''}</span></button>`}).join('')}</div></div>`;scrollTo(0,0)}
 
-function start(wi,li){const spec=WORLDS[wi].levels[li];G={wi,li,spec,kind:spec.kind,qs:buildQuestions(spec),i:0,res:[],lives:3,s:'',c:0,sel:null,fb:null,warn:''};play()}
+function newGame(spec,qs,wi,li){G={wi,li,spec,kind:spec.kind,qs,i:0,res:[],lives:3,s:'',c:0,sel:null,fb:null,warn:'',t0:0,acc:0,tStart:Date.now()};play()}
+function start(wi,li){const spec=cur()[wi].levels[li];newGame(spec,buildQuestions(spec),wi,li)}
 
+async function train(){
+  const btn=document.querySelector('.train');if(btn){btn.disabled=true;btn.classList.add('busy')}
+  const idx=getIdx(),skills=[...idx.keys()];
+  const pend=()=>PD().queue.flatMap(it=>(it.answers||[]).map(a=>({skill:a.skill,ok:a.ok,tag:a.tag,time_s:a.time_s,at:it.at,kind:it.kind})));
+  try{const srv=await sb('/rest/v1/rpc/mq_my_stats',{method:'POST',body:{p_profile:ST.profile.id,p_code:ST.profile.code,p_subject:ST.subject},timeout:4000});
+    PD().stats=pend().concat(srv.map(r=>({skill:r.skill,ok:r.ok,tag:r.error_tag||'',time_s:+r.time_s,at:r.played_at,kind:'hard'}))).slice(0,400);saveST()}catch(e){}
+  let focus=[];
+  try{const f=await sb('/rest/v1/rpc/mq_my_focus',{method:'POST',body:{p_profile:ST.profile.id,p_code:ST.profile.code},timeout:3000});focus=f.filter(x=>x.subject===ST.subject).map(x=>x.skill)}catch(e){}
+  const an=analyse(localRows(),new Set(skills));
+  const {plan}=planTraining(an,focus,skills);
+  let qs=trainQuestions(plan,idx);
+  if(qs.length<5)qs=trainQuestions(shuffle(skills).slice(0,10),idx);
+  newGame({name:'Entraînement du jour',kind:'train'},qs,-1,0)}
+
+/* ----- Une partie ----- */
+const immediate=()=>G.kind==='easy'||G.kind==='train';
+function qTime(){return Math.min(600,(G.acc||0)+(document.hidden?0:(performance.now()-G.t0)/1000))}
+document.addEventListener('visibilitychange',()=>{if(!G||G.fb)return;if(document.hidden)G.acc=(G.acc||0)+(performance.now()-G.t0)/1000;else G.t0=performance.now()});
+function hintFor(q){return{expr:q.form==='fact'?'Forme factorisée attendue':q.form==='dev'?'Forme développée et réduite':'',frac:'Fraction irréductible, ex. 7/12',set:KS_SET,list:'Sépare par « ; »'}[q.t]||''}
+function kb(){const rows=['7','8','9','(',')','BS','4','5','6','×','/','x','1','2','3','+','−','²','0',',',';','^','√','ℝ','[',']','{','}','∞','∪'];
+  return `<div class="kb">${rows.map(k=>`<button class="key ${k==='BS'?'alt':''}" data-act="key" data-k="${k}" aria-label="${k==='BS'?'Effacer':k}">${k==='BS'?'⌫':k}</button>`).join('')}<button class="key alt" data-act="key" data-k="L" aria-label="Curseur à gauche">◀</button><button class="key alt" data-act="key" data-k="R" aria-label="Curseur à droite">▶</button><button class="key alt" data-act="key" data-k="∅">∅</button><button class="key go" data-act="submit">Valider</button></div>`}
+function drawInput(){const el=document.getElementById('ans');if(!el)return;
+  el.innerHTML=G.s?`${rawHtml(G.s.slice(0,G.c))}<span class="caret"></span>${rawHtml(G.s.slice(G.c))}`:`<span class="caret"></span><span class="ph">Écris ta réponse avec le clavier</span>`}
 function play(){
-  const w=WORLDS[G.wi],q=G.qs[G.i];
-  const dots=G.qs.map((_,i)=>{const r=G.res[i];let c='';if(i===G.i&&!G.fb)c='cur';else if(r)c=G.kind==='easy'?(r.ok?'ok':'ko'):(G.kind==='boss'?(r.ok?'done':'ko'):'done');return `<i class="${c}"></i>`}).join('');
+  const train=G.kind==='train',w=train?{color:'var(--w4)'}:cur()[G.wi],q=G.qs[G.i];
+  const dots=G.qs.map((_,i)=>{const r=G.res[i];let c='';if(i===G.i&&!G.fb)c='cur';else if(r)c=immediate()?(r.ok?'ok':'ko'):(G.kind==='boss'?(r.ok?'done':'ko'):'done');return `<i class="${c}"></i>`}).join('');
   const head=`<div class="phead"><button class="back" data-act="quit" aria-label="Quitter">✕</button><div class="ttl"><b>${G.spec.name}</b><div class="dots">${dots}</div></div>${G.kind==='boss'?`<div class="hearts" id="hearts">${[0,1,2].map(i=>heart(i<G.lives)).join('')}</div>`:''}</div>`;
   const qcard=`<div class="qcard"><span class="qnum">Question ${G.i+1} / ${G.qs.length}</span><div class="qtext">${q.q}</div></div>`;
   if(G.fb){const r=G.fb;
@@ -515,80 +796,301 @@ function play(){
      <div class="fb ${r.ok?'ok':'ko'}"><h3>${r.ok?'Bien joué !':'Pas tout à fait'}</h3>${!r.ok&&r.msg?`<p class="errname">Erreur repérée : ${r.msg}</p>`:''}
       <dl class="kv"><dt>Ta réponse</dt><dd>${rawHtml(r.raw)}</dd>${r.ok?'':`<dt>Attendu</dt><dd>${pretty(q)}</dd>`}</dl><div class="sol">${q.sol}</div></div></div>
      <div class="nextbar"><button class="btn world" data-act="next">${G.i+1<G.qs.length?'Question suivante':'Voir mon résultat'}</button></div></div>`;return}
+  G.t0=performance.now();G.acc=0;
   const choice=!!q.keys;
   const input=choice?'':`<div class="ansbox" id="ans" aria-live="polite"></div>${q.hint||hintFor(q)?`<p class="hint">${q.hint||hintFor(q)}</p>`:''}`;
   const pad=choice?`<div class="choices">${q.keys.map(k=>`<button class="choice ${k.length>2?'word':''} ${G.sel===k?'sel':''}" data-act="choose" data-v="${k}">${k}</button>`).join('')}<button class="key go" data-act="submit">Valider</button></div>`:kb();
   app.innerHTML=`<div class="play" style="--wc:${w.color}">${head}<div class="qzone">${qcard}${input}<p class="warn" id="warn">${G.warn}</p></div><div class="kbwrap">${pad}</div></div>`;
   if(!choice)drawInput()}
-function hintFor(q){return{expr:q.form==='fact'?'Forme factorisée attendue':q.form==='dev'?'Forme développée et réduite':'',frac:'Fraction irréductible, ex. 7/12',set:KS_SET,list:'Sépare par « ; »'}[q.t]||''}
-function kb(){const rows=['7','8','9','(',')','BS','4','5','6','×','/','x','1','2','3','+','−','²','0',',',';','^','√','ℝ','[',']','{','}','∞','∪'];
-  return `<div class="kb">${rows.map(k=>`<button class="key ${k==='BS'?'alt':''}" data-act="key" data-k="${k}" aria-label="${k==='BS'?'Effacer':k}">${k==='BS'?'⌫':k}</button>`).join('')}<button class="key alt" data-act="key" data-k="L" aria-label="Curseur à gauche">◀</button><button class="key alt" data-act="key" data-k="R" aria-label="Curseur à droite">▶</button><button class="key alt" data-act="key" data-k="∅">∅</button><button class="key go" data-act="submit">Valider</button></div>`}
-function drawInput(){const el=document.getElementById('ans');if(!el)return;
-  el.innerHTML=G.s?`${rawHtml(G.s.slice(0,G.c))}<span class="caret"></span>${rawHtml(G.s.slice(G.c))}`:`<span class="caret"></span><span class="ph">Écris ta réponse avec le clavier</span>`}
 function key(k){if(k==='BS'){if(G.c>0){G.s=G.s.slice(0,G.c-1)+G.s.slice(G.c);G.c--}}else if(k==='L')G.c=Math.max(0,G.c-1);else if(k==='R')G.c=Math.min(G.s.length,G.c+1);else{G.s=G.s.slice(0,G.c)+k+G.s.slice(G.c);G.c+=k.length}
   if(G.warn){G.warn='';const w=document.getElementById('warn');if(w)w.textContent=''}drawInput()}
-function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
 function submit(){
   const q=G.qs[G.i];const raw=q.keys?(G.sel||''):G.s;const r=check(q,raw);
   if(r.invalid){G.warn=r.invalid;const w=document.getElementById('warn');if(w)w.textContent=r.invalid;return}
-  const rec={ok:r.ok,raw,msg:r.msg||''};G.res[G.i]=rec;
-  if(!r.ok){const tag=r.tag||q.skill;S.errors[tag]=(S.errors[tag]||0)+1;save()}
-  if(G.kind==='easy'){G.fb=rec;play();document.querySelector('.qzone').scrollTop=0;return}
+  const rec={ok:!!r.ok,raw,msg:r.msg||'',skill:q.skill,tag:r.ok?'':(r.tag||''),time:qTime()};G.res[G.i]=rec;
+  if(!r.ok){const d=PD();const tag=r.tag||q.skill;d.errors[tag]=(d.errors[tag]||0)+1;saveST()}
+  if(immediate()){G.fb=rec;play();const z=document.querySelector('.qzone');if(z)z.scrollTop=0;return}
   if(G.kind==='boss'&&!r.ok){G.lives--;
     if(G.lives<=0)return finish();
-    toast(`Une vie perdue · ${G.lives} restante${G.lives>1?'s':''}`);advance();const h=document.getElementById('hearts');if(h){h.classList.add('shake')}return}
+    toast(`Une vie perdue · ${G.lives} restante${G.lives>1?'s':''}`);advance();return}
   if(G.kind==='hard')toast('Réponse notée');
   advance()}
 function advance(){G.fb=null;G.sel=null;G.s='';G.c=0;G.warn='';if(G.i+1>=G.qs.length)return finish();G.i++;play()}
+
 function finish(){
-  const score=G.res.filter(r=>r&&r.ok).length,errs=G.res.filter(r=>r&&!r.ok).length,alive=G.lives>0;
-  const st=starsFor(G.kind,score,errs,alive);const id=kid(G.wi,G.li);
-  const prev=S.stars[id];S.stars[id]=Math.max(prev||0,st);
-  const label=G.kind==='boss'?(alive?`vaincu, ${errs} erreur${errs>1?'s':''}`:`perdu à la question ${G.i+1}`):`${score}/10`;
-  if(st>=(prev||0)||!S.best[id])S.best[id]=S.best[id]&&st<(prev||0)?S.best[id]:label;
-  S.sessions.push({d:new Date().toISOString(),w:G.wi,l:G.li,r:label,st});S.sessions=S.sessions.slice(-40);save();
-  const w=WORLDS[G.wi];const next=G.li+1<w.levels.length?G.li+1:null;
-  const title=G.kind==='boss'?(alive?'Boss vaincu !':'Le boss a gagné'):st===3?'Parfait !':st>=1?'Niveau réussi':'Encore un effort';
-  const verdict=G.kind==='boss'?(alive?`Tu as terrassé ${G.spec.name}. Toutes les étoiles du monde sont à toi${st<3?' — vise le sans-faute':''}.`:`Trois erreurs : le combat recommence avec de nouveaux exercices.`):st>=1?(next!==null&&!prev?`« ${w.levels[next].name} » est débloqué.`:'Rejoue pour gagner plus d\'étoiles.'):`Il faut 8/10 pour débloquer la suite. Les nombres changent à chaque partie.`;
-  const items=G.qs.map((q,i)=>{const r=G.res[i];const cls=!r?'na':r.ok?'ok':'ko';const open=r&&!r.ok&&G.kind!=='easy'?' open':'';
+  const done=G.res.filter(Boolean),score=done.filter(r=>r.ok).length,errs=done.length-score,alive=G.lives>0;
+  const train=G.kind==='train',d=PD();const w=train?null:cur()[G.wi];
+  let st=0,prev,id=null;
+  if(!train){st=starsFor(G.kind,score,errs,alive);id=kid(G.wi,G.li);prev=starsMap()[id];starsMap()[id]=Math.max(prev||0,st);
+    const label=G.kind==='boss'?(alive?`vaincu, ${errs} erreur${errs>1?'s':''}`:`perdu à la question ${G.i+1}`):`${score}/10`;
+    if(!bestMap()[id]||st>=(prev||0))bestMap()[id]=label}
+  const payload={subject:ST.subject,world:train?'train':w.id,level:train?'daily':'l'+(G.li+1),kind:train?'easy':G.kind,score,errors:errs,stars:st,
+    duration_s:Math.max(0,Math.min(36000,Math.round((Date.now()-G.tStart)/1000))),
+    answers:done.map(r=>({skill:r.skill,ok:r.ok,tag:r.tag||'',time_s:+r.time.toFixed(1)}))};
+  const at=new Date().toISOString();
+  d.queue.push(Object.assign({at},payload));
+  const nk=payload.kind==='boss'?'boss':payload.kind;
+  d.stats=done.slice().reverse().map(r=>({skill:r.skill,ok:r.ok,tag:r.tag||'',time_s:+r.time.toFixed(1),at,kind:train?'hard':nk})).concat(d.stats||[]).slice(0,400);
+  d.sessions.push({d:at,t:train?'train':G.wi+'-'+G.li,r:`${score}/${done.length}`,st});d.sessions=d.sessions.slice(-40);
+  saveST();flush();
+  const title=train?'Entraînement terminé':G.kind==='boss'?(alive?'Boss vaincu !':'Le boss a gagné'):st===3?'Parfait !':st>=1?'Niveau réussi':'Encore un effort';
+  const next=(!train&&G.li+1<w.levels.length)?G.li+1:null;
+  const verdict=train?"Chaque séance ajuste ce qu'on te propose ensuite.":G.kind==='boss'?(alive?`Tu as terrassé ${G.spec.name}. Toutes les étoiles du monde sont à toi${st<3?' — vise le sans-faute':''}.`:`Trois erreurs : le combat recommence avec de nouveaux exercices.`):st>=1?(next!==null&&!prev?`« ${w.levels[next].name} » est débloqué.`:"Rejoue pour gagner plus d'étoiles."):`Il faut 8/10 pour débloquer la suite. Les nombres changent à chaque partie.`;
+  const items=G.qs.map((q,i)=>{const r=G.res[i];const cls=!r?'na':r.ok?'ok':'ko';const open=r&&!r.ok&&!immediate()?' open':'';
     return `<details class="it ${cls}"${open}><summary><span class="n">${i+1}.</span><span class="s">${!r?'Non traitée':r.ok?'Juste':'Faux'+(r.msg?' — '+r.msg.replace(/<[^>]+>/g,''):'')}</span></summary><div class="qtext">${q.q}</div><dl class="kv">${r?`<dt>Ta réponse</dt><dd>${rawHtml(r.raw)}</dd>`:''}<dt>Attendu</dt><dd>${pretty(q)}</dd></dl><div class="sol">${q.sol}</div></details>`}).join('');
-  app.innerHTML=`<div class="screen res" style="--wc:${w.color}">
-   <div class="bigstars">${[0,1,2].map(i=>star(i<st)).join('')}</div>
-   <h2>${title}</h2><p class="score">${G.kind==='boss'?`${score} juste${score>1?'s':''} · ${errs} erreur${errs>1?'s':''}`:`${score} / 10`}</p><p class="verdict">${verdict}</p>
-   <div class="actions">${next!==null&&st>=1?`<button class="btn world" data-act="start" data-w="${G.wi}" data-l="${next}">Niveau suivant</button>`:''}<button class="btn ${st>=1&&next!==null?'ghost':'world'}" data-act="start" data-w="${G.wi}" data-l="${G.li}">${G.kind==='boss'&&!alive?'Retenter le boss':'Rejouer'}</button><button class="btn ghost" data-act="world" data-w="${G.wi}">Carte du monde</button></div>
-   <div class="review"><h3>${G.kind==='easy'?'Récapitulatif':'Ta copie corrigée'}</h3>${items}</div></div>`;
+  const wcol=train?'var(--w4)':w.color,wi=G.wi,li=G.li,kind=G.kind;
+  app.innerHTML=`<div class="screen res" style="--wc:${wcol}">
+   ${train?'':`<div class="bigstars">${[0,1,2].map(i=>star(i<st)).join('')}</div>`}
+   <h2>${title}</h2><p class="score">${kind==='boss'?`${score} juste${score>1?'s':''} · ${errs} erreur${errs>1?'s':''}`:`${score} / ${done.length}`}</p><p class="verdict">${verdict}</p>
+   <div class="actions">${train?`<button class="btn world" data-act="train">Un autre entraînement</button><button class="btn ghost" data-act="home">Retour à l'accueil</button>`:
+     `${next!==null&&st>=1?`<button class="btn world" data-act="start" data-w="${wi}" data-l="${next}">Niveau suivant</button>`:''}<button class="btn ${st>=1&&next!==null?'ghost':'world'}" data-act="start" data-w="${wi}" data-l="${li}">${kind==='boss'&&!alive?'Retenter le boss':'Rejouer'}</button><button class="btn ghost" data-act="world" data-w="${wi}">Carte du monde</button>`}</div>
+   <p class="foot" data-sync>${syncText()}</p>
+   <div class="review"><h3>${immediate()?'Récapitulatif':'Ta copie corrigée'}</h3>${items}</div></div>`;
   G=null;scrollTo(0,0)}
 
+/* ----- Bilan à copier (secours si pas de réseau) ----- */
 function bilanText(){
-  const[t,mxs]=totals();const d=new Date();let s=`Bilan Maths Quest – ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}\nÉtoiles : ${t} / ${mxs}\n`;
-  WORLDS.forEach((w,wi)=>{s+=`\n${w.name}\n`;w.levels.forEach((l,li)=>{const st=S.stars[kid(wi,li)];s+=`  ${l.name} : ${st==null?(unlocked(wi,li)?'pas encore joué':'verrouillé'):'★'.repeat(st)+'☆'.repeat(3-st)+` (meilleur : ${S.best[kid(wi,li)]})`}\n`})});
-  const week=S.sessions.filter(x=>Date.now()-new Date(x.d)<7*864e5);s+=`\nParties jouées ces 7 derniers jours : ${week.length}\n`;
-  const last=S.sessions.slice(-5).reverse();if(last.length){s+='Dernières parties :\n';last.forEach(x=>{const dd=new Date(x.d);s+=`  ${dd.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})} · ${WORLDS[x.w].levels[x.l].name} · ${x.r}\n`})}
-  const errs=Object.entries(S.errors).sort((a,b)=>b[1]-a[1]).slice(0,4);if(errs.length){s+='\nErreurs les plus fréquentes :\n';errs.forEach(([k,v])=>s+=`  ${k} : ${v}\n`)}
+  const d=PD(),[t,mxs]=totals();const dt=new Date();
+  let s=`Bilan de ${ST.profile.prenom} – ${dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}\nÉtoiles : ${t} / ${mxs}\n`;
+  cur().forEach((w,wi)=>{s+=`\n${w.name}\n`;w.levels.forEach((l,li)=>{const st=starsMap()[kid(wi,li)];s+=`  ${l.name} : ${st==null?(unlocked(wi,li)?'pas encore joué':'verrouillé'):'★'.repeat(st)+'☆'.repeat(3-st)+` (meilleur : ${bestMap()[kid(wi,li)]})`}\n`})});
+  const week=d.sessions.filter(x=>Date.now()-new Date(x.d)<7*DAY);s+=`\nParties ces 7 derniers jours : ${week.length}\n`;
+  const errs=Object.entries(d.errors||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);if(errs.length){s+='\nErreurs les plus fréquentes :\n';errs.forEach(([k,v])=>s+=`  ${k} : ${v}\n`)}
   return s}
 function bilan(){const txt=bilanText();
   app.innerHTML=`<div class="screen bilan"><div class="top"><button class="back" data-act="home" aria-label="Retour">←</button><p class="eyebrow">Bilan</p></div>
-   <h2 style="font-size:30px">Mon bilan</h2><p class="small">Copie le bilan, puis colle-le dans Messages pour l'envoyer.</p>
-   <pre id="btxt">${esc(txt)}</pre><button class="btn" data-act="copy">Copier le bilan</button><p class="copied" id="copied"></p>
-   <a class="btn ghost" href="sms:&body=${encodeURIComponent(txt)}" style="text-decoration:none">Ouvrir Messages</a>
-   <p class="small">Si « Ouvrir Messages » ne fait rien, utilise « Copier » puis colle dans la conversation.</p></div>`;scrollTo(0,0)}
-function copy(){const txt=bilanText();const done=ok=>{document.getElementById('copied').textContent=ok?'Copié ! Colle-le dans Messages.':'Sélectionne le texte au-dessus et copie-le.'};
-  try{navigator.clipboard.writeText(txt).then(()=>done(true),()=>{selectPre();done(false)})}catch(e){selectPre();done(false)}}
-function selectPre(){const el=document.getElementById('btxt');const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+   <h2 style="font-size:30px">Mon bilan</h2><p class="small">Tes résultats sont envoyés automatiquement à tes parents. Ce résumé sert de secours.</p>
+   <pre id="btxt">${esc(txt)}</pre><button class="btn" data-act="copy">Copier le bilan</button><p class="copied" id="copied"></p></div>`;scrollTo(0,0)}
+function copy(){const txt=bilanText();const done=ok=>{document.getElementById('copied').textContent=ok?'Copié !':'Sélectionne le texte au-dessus et copie-le.'};
+  const sel=()=>{const el=document.getElementById('btxt'),r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)};
+  try{navigator.clipboard.writeText(txt).then(()=>done(true),()=>{sel();done(false)})}catch(e){sel();done(false)}}
 
-document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
+/* =====================================================================
+   ESPACE PARENT
+   ===================================================================== */
+const parentSession=()=>{try{return JSON.parse(localStorage.getItem('mq.parent'))}catch(e){return null}};
+const setParent=s=>{try{s?localStorage.setItem('mq.parent',JSON.stringify(s)):localStorage.removeItem('mq.parent')}catch(e){}};
+const sessFrom=r=>({access:r.access_token,refresh:r.refresh_token,exp:Date.now()+(r.expires_in||3600)*1000});
+async function parentToken(){
+  let s=parentSession();if(!s||!s.access)return null;
+  if(Date.now()>s.exp-60000){try{s=sessFrom(await sb('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:s.refresh}}));setParent(s)}catch(e){if(!e.net)setParent(null);return null}}
+  return s.access}
+let PS={profiles:[],sel:null,subj:null,showAdd:false,newCode:null};
+
+function parentLogin(msg,ok){
+  app.className='wide';
+  app.innerHTML=`<div class="screen narrow"><header class="hero"><p class="eyebrow">Espace parent</p><h1>Suivi <span>des progrès</span></h1><p class="sub">Connecte-toi avec le compte du projet Supabase.</p></header>
+   <form id="pf" class="card form"><label for="pe">E-mail</label><input id="pe" type="email" autocomplete="email" required>
+    <label for="pw">Mot de passe</label><input id="pw" type="password" autocomplete="current-password">
+    <p class="${ok?'copied':'warn'}" id="pmsg" role="status">${esc(msg||'')}</p>
+    <button class="btn" type="submit">Connexion</button>
+    <button class="btn ghost" type="button" id="plink">Recevoir un lien par e-mail</button></form>
+   <p class="foot"><a href="#">Retour à l'appli</a></p></div>`;
+  const m=document.getElementById('pmsg');
+  document.getElementById('pf').addEventListener('submit',async e=>{
+    e.preventDefault();const email=document.getElementById('pe').value.trim(),password=document.getElementById('pw').value;
+    if(!password){m.className='warn';m.textContent='Entre ton mot de passe, ou demande un lien par e-mail.';return}
+    try{setParent(sessFrom(await sb('/auth/v1/token?grant_type=password',{method:'POST',body:{email,password}})));parentHome()}
+    catch(er){m.className='warn';m.textContent=er.net?'Pas de connexion.':'E-mail ou mot de passe incorrect.'}});
+  document.getElementById('plink').addEventListener('click',async()=>{
+    const email=document.getElementById('pe').value.trim();if(!email){m.className='warn';m.textContent="Entre d'abord ton e-mail.";return}
+    try{await sb('/auth/v1/otp?redirect_to='+encodeURIComponent(location.origin+location.pathname),{method:'POST',body:{email,create_user:false}});m.className='copied';m.textContent='Lien envoyé. Ouvre-le sur cet appareil.'}
+    catch(er){m.className='warn';m.textContent=er.net?'Pas de connexion.':"Envoi impossible (compte inconnu ?). Utilise le mot de passe."}});
+}
+async function parentRoot(){
+  app.className='wide';const t=await parentToken();if(!t)return parentLogin();parentHome()}
+async function parentHome(){
+  app.className='wide';app.innerHTML='<div class="screen"><p class="small">Chargement…</p></div>';
+  const t=await parentToken();if(!t)return parentLogin('Session expirée. Reconnecte-toi.');
+  try{PS.profiles=await sb('/rest/v1/mq_profiles?select=id,prenom,niveau,created_at&order=created_at.asc',{token:t})}
+  catch(e){return parentLogin(e.net?'Pas de connexion.':'Accès refusé. Reconnecte-toi.')}
+  if(!PS.profiles.some(p=>p.id===PS.sel))PS.sel=PS.profiles[0]?PS.profiles[0].id:null;
+  if(!PS.profiles.length)PS.showAdd=true;
+  renderParent()}
+
+function pHeader(){
+  return `<div class="ptop"><div class="chips">${PS.profiles.map(p=>`<button class="chip ${p.id===PS.sel?'on':''}" data-act="p-sel" data-id="${p.id}">${esc(p.prenom)} <small>${esc(p.niveau)}</small></button>`).join('')}<button class="chip add" data-act="p-add">+ Ajouter un enfant</button></div>
+   <div class="pr"><a href="#" class="small">Retour à l'appli</a><button class="linkbtn" data-act="p-out">Déconnexion</button></div></div>`}
+function addForm(){
+  if(PS.newCode)return `<section class="card"><h3>Code joueur de ${esc(PS.newCode.prenom)}</h3><p class="codebig">${esc(PS.newCode.code)}</p><p class="small">Note-le maintenant : il ne sera plus affiché. ${esc(PS.newCode.prenom)} le tape une fois sur son téléphone, à l'adresse de l'appli.</p><button class="btn" data-act="p-codeok">C'est noté</button></section>`;
+  if(!PS.showAdd)return '';
+  return `<section class="card"><h3>Ajouter un enfant</h3><form id="af" class="form inline"><label for="an">Prénom</label><input id="an" required maxlength="40" autocomplete="off">
+   <label for="al">Niveau</label><select id="al"><option value="2nde">2nde</option><option value="5e">5e</option><option value="6e">6e</option><option value="4e">4e</option><option value="3e">3e</option><option value="1ere">1ère</option><option value="Tle">Terminale</option></select>
+   <p class="warn" id="amsg" role="status"></p><button class="btn" type="submit">Créer le profil</button></form></section>`}
+
+function renderParent(){
+  const p=PS.profiles.find(x=>x.id===PS.sel);
+  app.innerHTML=`<div class="screen pwide">${pHeader()}${addForm()}<div id="pbody">${p?'<p class="small">Chargement des résultats…</p>':''}</div></div>`;
+  const af=document.getElementById('af');
+  if(af)af.addEventListener('submit',async e=>{
+    e.preventDefault();const m=document.getElementById('amsg');const t=await parentToken();if(!t)return parentLogin('Session expirée.');
+    const prenom=document.getElementById('an').value.trim(),niveau=document.getElementById('al').value;
+    try{const code=await sb('/rest/v1/rpc/mq_create_profile',{method:'POST',body:{p_prenom:prenom,p_niveau:niveau},token:t});
+      PS.newCode={prenom,code};PS.showAdd=false;await parentHome()}
+    catch(er){m.textContent=er.status===404?"La base n'est pas prête (script SQL à lancer).":'Création impossible : '+er.message}});
+  if(p)loadChild(p)}
+
+async function loadChild(p){
+  const body=document.getElementById('pbody');
+  const t=await parentToken();if(!t)return parentLogin('Session expirée.');
+  try{
+    const[att,ans,foc]=await Promise.all([
+      fetchAll(`/rest/v1/mq_attempts?profile_id=eq.${p.id}&select=id,subject,world,level,kind,score,errors,stars,duration_s,played_at&order=played_at.desc`,t),
+      fetchAll(`/rest/v1/mq_answers?profile_id=eq.${p.id}&select=id,attempt_id,subject,position,skill,ok,error_tag,time_s&order=id.desc`,t),
+      sb(`/rest/v1/mq_focus?profile_id=eq.${p.id}&select=id,subject,skill,until&order=until.desc`,{token:t})]);
+    PS.data={p,att,ans,foc};
+    if(!document.getElementById('pbody'))return;
+    document.getElementById('pbody').innerHTML=dashHTML();
+  }catch(e){body.innerHTML=`<p class="warn">${e.net?'Pas de connexion.':'Lecture impossible : '+esc(e.message)}</p>`}}
+
+/* ----- Tableau de bord ----- */
+function findLevel(subject,wid,lid){
+  if(wid==='train')return{w:'Entraînement',l:'du jour'};
+  const c=CURRICULA[subject]||{};
+  for(const n of Object.keys(c)){if(n==='label')continue;const w=c[n].find(x=>x.id===wid);if(w){const l=w.levels[+String(lid).slice(1)-1];return{w:w.name,l:l?l.name:lid,world:w,level:l}}}
+  return{w:wid,l:lid}}
+function lineChart(pts){
+  if(!pts.length)return '<p class="small">Pas encore de parties.</p>';
+  const W=640,H=230,L=40,R=14,T=14,B=30,t0=pts[0].t,t1=pts[pts.length-1].t,span=Math.max(t1-t0,DAY);
+  const X=t=>L+(pts.length===1?(W-L-R)/2:(t-t0)/span*(W-L-R)),Y=p=>T+(1-p)*(H-T-B);
+  const grid=[0,.5,1].map(v=>`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" class="gl"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end" class="gt">${v*100}%</text>`).join('');
+  const ma=pts.map((_,i)=>{const s=pts.slice(Math.max(0,i-4),i+1);return{t:pts[i].t,p:s.reduce((a,x)=>a+x.p,0)/s.length}});
+  const line=ma.map((q,i)=>`${i?'L':'M'}${X(q.t).toFixed(1)},${Y(q.p).toFixed(1)}`).join('');
+  const dots=pts.map(q=>`<circle cx="${X(q.t).toFixed(1)}" cy="${Y(q.p).toFixed(1)}" r="3.5" class="dt"/>`).join('');
+  const f=t=>new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Taux de réussite par partie du ${f(t0)} au ${f(t1)}, moyenne glissante sur 5 parties" class="chart">${grid}<path d="${line}" class="ln"/>${dots}<text x="${L}" y="${H-8}" class="gt">${f(t0)}</text><text x="${W-R}" y="${H-8}" text-anchor="end" class="gt">${f(t1)}</text></svg>`}
+
+function dashHTML(){
+  const{p,att,ans,foc}=PS.data,now=Date.now();
+  const subjects=[...new Set([...att.map(a=>a.subject),...subjectsFor(p.niveau)])];
+  if(!subjects.length)subjects.push('maths');
+  if(!subjects.includes(PS.subj))PS.subj=subjects[0];
+  const subj=PS.subj;
+  const A=att.filter(a=>a.subject===subj),am=new Map(A.map(a=>[a.id,a]));
+  const rows=ans.filter(r=>am.has(r.attempt_id)).map(r=>{const a=am.get(r.attempt_id);return{skill:r.skill,ok:r.ok,tag:r.error_tag||'',time_s:+r.time_s,at:a.played_at,kind:a.world==='train'?'hard':a.kind}});
+  const curW=(CURRICULA[subj]||{})[p.niveau]||[];
+  const idx=curW.length?buildSkillIndex(curW):new Map();
+  const skillSet=new Set([...idx.keys(),...rows.map(r=>r.skill)]);
+  const an=analyse(rows,skillSet,now);
+  if(!A.length)return `<p class="card small">${esc(p.prenom)} n'a pas encore joué${subjects.length>1?' cette matière':''}. Le code joueur se tape une fois sur son téléphone, sur l'adresse de l'appli.</p>`;
+
+  /* chiffres clés */
+  const w7=A.filter(a=>now-new Date(a.played_at)<7*DAY);
+  const r7=rows.filter(r=>now-new Date(r.at)<7*DAY),rp=rows.filter(r=>now-new Date(r.at)>=7*DAY&&now-new Date(r.at)<14*DAY);
+  const acc=a=>a.length?a.filter(r=>r.ok).length/a.length:null;
+  const a7=acc(r7),ap=acc(rp);
+  const delta=(a7!=null&&ap!=null)?Math.round((a7-ap)*100):null;
+  const last=new Date(A[0].played_at);
+  const kpis=`<div class="kpis">
+   <div class="kpi"><span>Parties, 7 jours</span><b>${w7.length}</b></div>
+   <div class="kpi"><span>Temps de jeu, 7 jours</span><b>${fmtMin(w7.reduce((s,a)=>s+a.duration_s,0))}</b></div>
+   <div class="kpi"><span>Réussite, 7 jours</span><b>${a7==null?'–':Math.round(a7*100)+' %'}</b>${delta==null?'':`<em class="${delta>=0?'up':'down'}">${delta>=0?'+':''}${delta} pts vs semaine précédente</em>`}</div>
+   <div class="kpi"><span>Dernière partie</span><b>${last.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}</b></div></div>`;
+
+  /* évolution */
+  const pts=A.slice().reverse().map(a=>({t:new Date(a.played_at).getTime(),p:(a.score+a.errors)?a.score/(a.score+a.errors):0}));
+
+  /* compétences */
+  const list=an.filter(o=>o.n>=3).sort((x,y)=>(y.weak-x.weak)||(y.rate-x.rate)).slice(0,10);
+  const status=o=>o.weak?'<span class="pill bad">À renforcer</span>':o.mastered?'<span class="pill good">Maîtrisée</span>':o.consolidate?'<span class="pill mid">En progrès</span>':'<span class="pill">Correct</span>';
+  const flags=o=>(o.slow?'<span class="pill mid">lent</span>':'')+(o.rushed?'<span class="pill bad">rapide et faux</span>':'');
+  const tr=o=>({mieux:'<span class="up">▼ moins d\'erreurs</span>',pire:'<span class="down">▲ plus d\'erreurs</span>',stable:'<span class="small">stable</span>'}[o.trend]||'<span class="small">–</span>');
+  const skillsTbl=list.length?`<div class="tw"><table><thead><tr><th>Compétence</th><th>Erreurs</th><th>Tendance</th><th>Temps médian</th><th>Statut</th></tr></thead><tbody>${list.map(o=>`<tr><td>${esc(o.key)}</td><td class="num">${o.errs} / ${o.n}</td><td>${tr(o)}</td><td class="num">${o.medTime==null?'–':fmtMin(o.medTime)}</td><td>${status(o)} ${flags(o)}</td></tr>`).join('')}</tbody></table></div><p class="small">Compétences avec au moins 3 réponses. « À renforcer » : taux d'erreur récent élevé (les réponses récentes comptent davantage). « Maîtrisée » : 5 réussites d'affilée sur au moins 2 jours.</p>`:'<p class="small">Pas encore assez de réponses (au moins 3 par compétence) pour détecter des faiblesses.</p>';
+
+  /* rythme */
+  const kinds=[['easy','Niveaux faciles'],['hard','Niveaux difficiles et entraînement'],['boss','Boss']];
+  const pace=kinds.map(([k,lab])=>{const rr=rows.filter(r=>r.kind===k&&r.time_s>0);if(rr.length<5)return '';
+    const md=median(rr.map(r=>r.time_s)),ratio=md/REF[k];
+    const lbl=ratio>1.5?'<span class="pill mid">plus lent que le repère</span>':ratio<0.5?'<span class="pill mid">très rapide</span>':'<span class="pill good">rythme correct</span>';
+    return `<li><span>${lab}</span><b>${Math.round(md)} s</b><small>par question (repère ${REF[k]} s)</small>${lbl}</li>`}).join('');
+  const rushed=an.filter(o=>o.rushed).map(o=>esc(o.key)),slow=an.filter(o=>o.slow).map(o=>esc(o.key));
+  const paceHTML=`${pace?`<ul class="pace">${pace}</ul>`:'<p class="small">Pas encore assez de réponses chronométrées.</p>'}${rushed.length?`<p class="note">Va vite et se trompe : ${rushed.join(', ')}. Il relit probablement mal.</p>`:''}${slow.length?`<p class="note">Beaucoup plus lent que le repère : ${slow.join(', ')}.</p>`:''}<p class="small">Le chrono est invisible pour l'enfant. Les repères (60, 90 et 120 s par question) sont des ordres de grandeur.</p>`;
+
+  /* erreurs fréquentes */
+  const tags=new Map();rows.filter(r=>!r.ok).forEach(r=>{const k=r.tag||r.skill;tags.set(k,(tags.get(k)||0)+1)});
+  const top=[...tags.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6),mxv=top.length?top[0][1]:1;
+  const tagsHTML=top.length?`<ul class="bars">${top.map(([k,v])=>`<li><span>${esc(k)}</span><i style="width:${Math.max(6,v/mxv*100)}%"></i><b>${v}</b></li>`).join('')}</ul>`:'<p class="small">Aucune erreur enregistrée.</p>';
+
+  /* avancement des mondes */
+  const best=new Map();A.filter(a=>a.world!=='train').forEach(a=>{const k=a.world+'|'+a.level;best.set(k,Math.max(best.get(k)||0,a.stars))});
+  const worldsHTML=curW.length?`<ul class="wprog">${curW.map(w=>`<li><span>${w.name}</span><span class="wl">${w.levels.map((l,li)=>{const s=best.get(w.id+'|l'+(li+1))||0;return `<i class="s${s} ${l.kind==='boss'?'boss':''}" title="${esc(l.name)} : ${s} étoile(s)"></i>`}).join('')}</span></li>`).join('')}</ul>`:'';
+
+  /* séances */
+  const seances=A.slice(0,8).map(a=>{const lv=findLevel(a.subject,a.world,a.level);const d=new Date(a.played_at);
+    return `<li><span>${d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span><span>${esc(lv.w)} · ${esc(lv.l)}</span><b>${a.score}/${a.score+a.errors}</b><small>${fmtMin(a.duration_s)}</small></li>`}).join('');
+
+  /* thème imposé */
+  const today=new Date().toISOString().slice(0,10);
+  const act=foc.filter(f=>f.subject===subj&&f.until>=today);
+  const opts=[...skillSet].sort((a,b)=>a.localeCompare(b,'fr')).map(s=>`<option>${esc(s)}</option>`).join('');
+  const focusHTML=`${act.length?`<ul class="flist">${act.map(f=>`<li><span>${esc(f.skill)}</span><small>jusqu'au ${new Date(f.until+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</small><button class="linkbtn" data-act="p-focusdel" data-id="${f.id}">Retirer</button></li>`).join('')}</ul>`:'<p class="small">Aucun thème imposé.</p>'}
+   <form id="ff" class="form inline"><label for="fs">Compétence</label><select id="fs">${opts}</select><label for="fd">Pendant (jours)</label><input id="fd" type="number" min="1" max="60" value="7"><button class="btn" type="submit">Imposer</button></form>
+   <p class="small">Ces compétences passent en tête de l'entraînement du jour.</p>`;
+
+  return `${subjects.length>1?`<div class="tabs">${subjects.map(s=>`<button class="tab ${s===subj?'on':''}" data-act="p-subj" data-s="${s}">${esc((CURRICULA[s]||{}).label||s)}</button>`).join('')}</div>`:''}
+   <h2 class="ptitle">${esc(p.prenom)} <small>${esc(p.niveau)}</small></h2>${kpis}
+   <div class="pgrid">
+    <section class="card span2"><h3>Évolution</h3>${lineChart(pts)}<p class="small">Chaque point est une partie. La ligne est la moyenne des 5 dernières.</p></section>
+    <section class="card span2"><h3>Points faibles et forts</h3>${skillsTbl}</section>
+    <section class="card"><h3>Rythme</h3>${paceHTML}</section>
+    <section class="card"><h3>Erreurs les plus fréquentes</h3>${tagsHTML}</section>
+    ${worldsHTML?`<section class="card"><h3>Avancement</h3>${worldsHTML}</section>`:''}
+    <section class="card"><h3>Dernières parties</h3><ul class="seances">${seances}</ul></section>
+    <section class="card"><h3>Thème imposé</h3>${focusHTML}</section>
+    <section class="card"><h3>Données</h3><p class="small">Le plan gratuit n'a pas de sauvegarde automatique.</p><button class="btn ghost" data-act="p-csv">Exporter en CSV</button></section>
+   </div>`}
+
+function exportCSV(){
+  const{p,att,ans}=PS.data,am=new Map(att.map(a=>[a.id,a]));
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const head=['date','matiere','monde','niveau','type','competence','juste','erreur_type','temps_s'];
+  const lines=ans.map(r=>{const a=am.get(r.attempt_id);return a?[a.played_at,a.subject,a.world,a.level,a.kind,r.skill,r.ok?1:0,r.error_tag||'',r.time_s].map(q).join(','):null}).filter(Boolean);
+  const blob=new Blob(['﻿'+head.join(',')+'\n'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`maths-quest-${p.prenom}.csv`.toLowerCase();document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+/* ----- Événements ----- */
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;
   if(a==='home')home();else if(a==='world')world(+b.dataset.w);else if(a==='start')start(+b.dataset.w,+b.dataset.l);
-  else if(a==='quit'){const wi=G.wi;world(wi)}else if(a==='key')key(b.dataset.k);
+  else if(a==='train')train();
+  else if(a==='quit'){const train=G.kind==='train',wi=G.wi;G=null;train?home():world(wi)}
+  else if(a==='key')key(b.dataset.k);
   else if(a==='choose'){G.sel=b.dataset.v;document.querySelectorAll('.choice').forEach(c=>c.classList.toggle('sel',c.dataset.v===G.sel));if(G.warn){G.warn='';document.getElementById('warn').textContent=''}}
-  else if(a==='submit')submit();else if(a==='next')advance();else if(a==='bilan')bilan();else if(a==='copy')copy()});
+  else if(a==='submit')submit();else if(a==='next')advance();else if(a==='bilan')bilan();else if(a==='copy')copy();
+  else if(a==='subject'){ST.subject=b.dataset.s;saveST();home()}
+  else if(a==='logout'){ST.profile=null;saveST();loginView()}
+  else if(a==='p-sel'){PS.sel=b.dataset.id;PS.showAdd=false;PS.newCode=null;renderParent()}
+  else if(a==='p-add'){PS.showAdd=!PS.showAdd;PS.newCode=null;renderParent()}
+  else if(a==='p-codeok'){PS.newCode=null;renderParent()}
+  else if(a==='p-out'){setParent(null);PS={profiles:[],sel:null,subj:null,showAdd:false,newCode:null};parentLogin()}
+  else if(a==='p-subj'){PS.subj=b.dataset.s;document.getElementById('pbody').innerHTML=dashHTML()}
+  else if(a==='p-csv')exportCSV();
+  else if(a==='p-focusdel'){const t=await parentToken();if(!t)return;try{await sb(`/rest/v1/mq_focus?id=eq.${b.dataset.id}`,{method:'DELETE',token:t});PS.data.foc=PS.data.foc.filter(f=>f.id!==b.dataset.id);document.getElementById('pbody').innerHTML=dashHTML()}catch(er){toast('Suppression impossible')}}
+});
+document.addEventListener('submit',async e=>{
+  if(e.target.id!=='ff')return;e.preventDefault();
+  const t=await parentToken();if(!t)return;const{p}=PS.data;
+  const skill=document.getElementById('fs').value,days=Math.max(1,Math.min(60,+document.getElementById('fd').value||7));
+  const until=new Date(Date.now()+days*DAY).toISOString().slice(0,10);
+  try{await sb('/rest/v1/mq_focus',{method:'POST',token:t,prefer:'return=representation',body:{profile_id:p.id,subject:PS.subj,skill,until}}).then(r=>{PS.data.foc=r.concat(PS.data.foc)});document.getElementById('pbody').innerHTML=dashHTML();toast('Thème imposé')}
+  catch(er){toast('Impossible : '+er.message)}});
 document.addEventListener('keydown',e=>{if(!G||e.metaKey||e.ctrlKey)return;
   if(G.fb){if(e.key==='Enter'){e.preventDefault();advance()}return}
   const q=G.qs[G.i];if(e.key==='Enter'){e.preventDefault();submit();return}if(q.keys)return;
   const map={'*':'×','-':'−',Backspace:'BS',ArrowLeft:'L',ArrowRight:'R'};const k=map[e.key]||e.key;
   if(k.length===1&&/[0-9x+×−\/^()\[\]{};,√²∞∪ℝ∅.]/.test(k)||['BS','L','R'].includes(k)){e.preventDefault();key(k)}});
-home();
-}
-</script>
 
+/* ----- Routage ----- */
+function route(){
+  const h=location.hash;
+  if(h.includes('access_token=')){const q=new URLSearchParams(h.slice(1));
+    setParent({access:q.get('access_token'),refresh:q.get('refresh_token'),exp:Date.now()+(+q.get('expires_in')||3600)*1000});
+    history.replaceState(null,'',location.pathname+'#parent');return parentHome()}
+  if(h==='#parent')return parentRoot();
+  app.className='';
+  if(ST.profile){flush();home()}else loginView()}
+window.addEventListener('hashchange',route);
+route();
+}
+
+</script>
 </body>
 </html>
