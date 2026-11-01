@@ -1155,7 +1155,7 @@ async function loadChild(p){
 function findLevel(subject,wid,lid){
   if(wid==='train')return{w:'Entraînement',l:'du jour'};
   const c=CURRICULA[subject]||{};
-  for(const n of Object.keys(c)){if(n==='label')continue;const w=c[n].find(x=>x.id===wid);if(w){const l=w.levels[+String(lid).slice(1)-1];return{w:w.name,l:l?l.name:lid,world:w,level:l}}}
+  for(const n of Object.keys(c)){if(!Array.isArray(c[n]))continue;const w=c[n].find(x=>x.id===wid);if(w){const l=w.levels[+String(lid).slice(1)-1];return{w:w.name,l:l?l.name:lid,world:w,level:l}}}
   return{w:wid,l:lid}}
 function lineChart(pts){
   if(!pts.length)return '<p class="small">Pas encore de parties.</p>';
