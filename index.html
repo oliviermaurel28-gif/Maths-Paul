@@ -274,12 +274,24 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 }
 
 .totstars{white-space:nowrap}
+/* ---------- français : texte et réponses libres ---------- */
+.passage{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:4px 16px 8px}
+.passage summary{cursor:pointer;font-family:var(--f-display);font-size:18px;padding:10px 0;list-style:none}
+.passage summary::after{content:" ▾";color:var(--muted)}
+.passage:not([open]) summary::after{content:" ▸"}
+.ptext p{margin:0 0 8px;font-size:17px;line-height:1.6;overflow-wrap:anywhere}
+.natin{box-sizing:border-box;width:100%;min-height:56px;font:inherit;font-size:19px;border-radius:12px;border:2px solid var(--wc);background:var(--card);color:var(--ink);padding:0 14px}
+.natin:focus-visible{outline:3px solid var(--w4);outline-offset:1px}
+.choices.long{grid-template-columns:1fr;max-width:640px}
+.choices.long .choice{font-size:16px;line-height:1.4;text-align:left;padding:10px 14px;height:auto}
+.items{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.item{display:flex;gap:10px;margin:0;font-size:16px;align-items:baseline}
+.item b{min-width:22px;height:22px;border-radius:6px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-size:13px;flex:none}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-
 /* =====================================================================
    OUTILS MATHS
    ===================================================================== */
@@ -353,6 +365,9 @@ function check(q,raw){
   raw=String(raw||'').trim();
   if(!raw)return{invalid:q.t==='choice'?'Choisis une réponse.':'Écris une réponse avant de valider.'};
   if(q.t==='choice'){let n=nrm(raw);return{ok:q.a.some(a=>nrm(a)===n)}}
+  if(q.t==='kw'){const n=' '+nrm(raw).replace(/[^a-z0-9]+/g,' ').trim()+' ';
+    return{ok:q.groups.every(g=>g.some(w=>n.includes(' '+w+' ')||n.includes(' '+w)))}}
+  if(q.t==='ord'){const n=raw.toUpperCase().replace(/[^A-Z]/g,'');return{ok:n===q.a}}
   if(q.t==='dec')return checkDec(raw,q.n);
   let ok;
   try{ok=EQ[q.t](raw,q.a)}catch(e){
@@ -557,20 +572,22 @@ const WORLDS=[
 ['ens','arith','calc','fonc'].forEach((id,i)=>{WORLDS[i].id=id});
 /* Un paquet de contenu par matière et par niveau : CURRICULA.<matière>.<niveau> = liste de mondes.
    Pour ajouter l'histoire-géo de 5e : CURRICULA.histgeo={label:'Histoire-géo','5e':[...]} */
-const CURRICULA={maths:{label:'Maths','2nde':WORLDS}};
+const CURRICULA={maths:{label:'Maths',title:'Maths','2nde':WORLDS}};
 const subjectsFor=n=>Object.keys(CURRICULA).filter(s=>CURRICULA[s][n]);
 const N_Q=10;
 function buildQuestions(spec){
+  if(spec.build)return spec.build();
   let gens=[];while(gens.length<N_Q)gens=gens.concat(shuffle(spec.gens));gens=gens.slice(0,N_Q);
   const seen=new Set();const qs=gens.map(g=>{let q;for(let t=0;t<8;t++){try{q=g(spec.kind)}catch(e){q=null}if(q&&!seen.has(q.q))break}seen.add(q.q);return q});
   return spec.kind==='easy'?qs:shuffle(qs)}
-const starsFor=(kind,score,errs,alive)=>kind==='boss'?(alive?3-errs:0):score>=10?3:score>=9?2:score>=8?1:0;
+const starsFor=(kind,score,errs,alive)=>kind==='boss'?(alive?3-errs:0):errs<=0?3:errs===1?2:errs===2?1:0;
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const rawHtml=s=>esc(s).replace(/\^\(?(-?[0-9x]+)\)?/g,'<sup>$1</sup>');
 
 /* ----- Analyse des réponses ----- */
 const DAY=864e5;
 const REF={easy:60,hard:90,boss:120};          // repère de rythme, en secondes par question
+let REFMUL=1;const refOf=k=>REF[k||'hard']*REFMUL;const subjMul=s=>s==='francais'?1.6:1;
 function median(a){if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);const h=s.length>>1;return s.length%2?s[h]:(s[h-1]+s[h])/2}
 function buildSkillIndex(worlds){
   const idx=new Map(),seen=new Set();
@@ -604,7 +621,7 @@ function analyse(rows,skillSet,now=Date.now()){
     const er=a=>a.filter(r=>!r.ok).length/a.length;
     o.trend=(rec.length>=3&&prev.length>=3)?(er(rec)-er(prev)<=-.15?'mieux':er(rec)-er(prev)>=.15?'pire':'stable'):'';
     o.medTime=median(o.rows.map(r=>r.time));
-    o.ratio=median(o.rows.map(r=>r.time/REF[r.kind||'hard']));
+    o.ratio=median(o.rows.map(r=>r.time/refOf(r.kind)));
     o.slow=o.n>=4&&o.ratio>1.6;
     o.rushed=o.n>=6&&o.ratio<0.4&&o.errs/o.n>0.3;
     out.push(o)});
@@ -654,6 +671,171 @@ async function fetchAll(path,token){
     const page=await sb(path+(path.includes('?')?'&':'?')+`limit=1000&offset=${off}`,{token});
     out=out.concat(page);if(page.length<1000)break}
   return out}
+
+/* =====================================================================
+   FRANÇAIS 5e : compréhension de texte (textes originaux)
+   Format d'une question :
+     k:'qcm' (a = index de la bonne réponse dans o) | 'kw' (réponse courte tapée, g = groupes de mots-clés)
+       | 'ord' (items à remettre dans l'ordre, a = lettres) ;  lv : 'e' facile, 'h' difficile, 'b' boss ;  s : compétence
+   ===================================================================== */
+const SK={rep:'Repérer une information',voc:'Vocabulaire en contexte',inf:"Comprendre l'implicite",nar:'Narrateur et point de vue',
+  chr:'Chronologie et schéma narratif',per:'Personnages et sentiments',tps:'Temps du récit',fig:'Figures de style',jus:'Justifier avec le texte',ide:'Idée générale et message'};
+const FR_TEXTS={
+/* ---------- Contes et fables ---------- */
+chevre:{id:'chevre',title:'La chèvre et le loup',body:`Un soir, une petite chèvre s'était attardée dans la montagne. Quand elle voulut rentrer à la bergerie, un loup maigre lui barra le passage, les babines retroussées.
+— Ma belle, tu tombes bien, dit-il en souriant. Je n'ai rien mangé depuis trois jours.
+La chèvre, le cœur battant, comprit qu'elle ne pourrait ni lutter ni fuir. Alors elle prit un air tranquille.
+— Fais donc, répondit-elle. Mais laisse-moi d'abord m'asseoir : mon maître m'a toujours dit qu'avant de mourir il fallait chanter une dernière fois. Veux-tu m'entendre ?
+Le loup, curieux, s'assit en face d'elle. La chèvre se mit à bêler de toutes ses forces, si fort que l'écho se répandit dans la vallée. Au bout d'un moment, des aboiements retentirent au loin : les chiens du berger arrivaient en courant.
+— Tu m'as trompé ! hurla le loup en détalant.
+— Non, répondit la chèvre, j'ai seulement appelé à l'aide.
+Moralité : quand la force manque, l'esprit peut sauver.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Quel animal barre le passage de la chèvre ?`,g:[['loup']],ans:`Le loup`,sol:`« un loup maigre lui barra le passage ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Pourquoi la chèvre se retrouve-t-elle en danger ?`,o:[`Elle s'est attardée dans la montagne et rencontre un loup affamé.`,`Elle s'est perdue en ville.`,`Elle a volé le repas du berger.`,`Elle est tombée dans un puits.`],a:0,sol:`« une petite chèvre s'était attardée dans la montagne », puis « un loup maigre lui barra le passage » : il n'a rien mangé depuis trois jours.`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que demande la chèvre au loup ?`,o:[`De la laisser s'asseoir et chanter une dernière fois.`,`De la laisser partir sans rien dire.`,`De lui donner à manger.`,`De la porter jusqu'à la bergerie.`],a:0,sol:`Elle dit : « laisse-moi d'abord m'asseoir » et propose de chanter une dernière fois.`},
+ {k:'ord',lv:'e',s:SK.chr,q:`Remets ces événements dans l'ordre du récit.`,items:[`Les chiens du berger arrivent.`,`La chèvre se met à bêler de toutes ses forces.`,`Le loup lui barre le passage.`,`Le loup s'assoit en face d'elle.`],a:'CDBA',sol:`Le loup barre d'abord le passage (C), puis il s'assoit pour écouter (D). La chèvre bêle (B) et les chiens arrivent (A). Ordre : C D B A.`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Quelle est la vraie intention de la chèvre quand elle propose de chanter ?`,o:[`Appeler à l'aide les chiens du berger.`,`Charmer le loup avec sa belle voix.`,`Se reposer un moment.`,`Faire rire le loup.`],a:0,sol:`Elle bêle « de toutes ses forces » et les chiens arrivent. Son « chant » est un appel au secours. Le texte ne le dit qu'à la fin : c'est à toi de le comprendre.`},
+ {k:'qcm',lv:'h',s:SK.voc,q:`Dans « hurla le loup en détalant », que signifie « détalant » ?`,o:[`S'enfuyant très vite`,`S'endormant`,`Se cachant`,`Attaquant`],a:0,sol:`Le loup a peur des chiens et s'enfuit à toute vitesse.`},
+ {k:'qcm',lv:'b',s:SK.ide,q:`Que signifie la moralité « quand la force manque, l'esprit peut sauver » ?`,o:[`L'intelligence peut permettre d'échapper à plus fort que soi.`,`Il vaut toujours mieux être le plus fort.`,`Il ne faut jamais chanter devant un loup.`,`Les loups sont toujours vaincus.`],a:0,sol:`« La force » est ce qui manque à la chèvre. « L'esprit », c'est son astuce. La moralité est la leçon que le texte veut faire comprendre.`},
+ {k:'qcm',lv:'b',s:SK.jus,q:`Quelle phrase montre que la chèvre invente une excuse pour gagner du temps ?`,o:[`« mon maître m'a toujours dit qu'avant de mourir il fallait chanter une dernière fois »`,`« Je n'ai rien mangé depuis trois jours »`,`« Le loup, curieux, s'assit en face d'elle »`,`« les chiens du berger arrivaient en courant »`],a:0,sol:`Elle prétend suivre un conseil de son maître : cette règle est inventée pour retarder le loup.`}]},
+
+geant:{id:'geant',title:'Le géant de la grotte',body:`Le géant se tenait à l'entrée de la grotte. Il était si grand que sa tête touchait presque le plafond de pierre. Sa peau, grise et rugueuse comme l'écorce d'un vieux chêne, était couverte de mousse. Ses mains énormes pendaient le long de son corps, et sa barbe, emmêlée de feuilles mortes, lui tombait jusqu'aux genoux.
+— Qui ose troubler mon sommeil ? gronda-t-il d'une voix de tonnerre.
+Éloïse recula d'un pas, mais elle garda la tête haute.
+— Je m'appelle Éloïse, dit-elle. Je viens chercher la fleur d'argent pour guérir ma mère.
+Le géant fronça ses sourcils broussailleux. Pendant un long moment, on n'entendit que le goutte-à-goutte de l'eau sur les rochers. Puis, à la surprise de la fillette, il éclata d'un rire grave qui fit trembler la grotte.
+— Les hommes viennent ici pour mon trésor, jamais pour une fleur ! Prends-la, petite. Mais promets-moi de ne dire à personne où je vis.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Quel est le prénom de la fillette ?`,g:[['eloise']],ans:`Éloïse`,sol:`« Je m'appelle Éloïse, dit-elle. »`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Pourquoi Éloïse vient-elle dans la grotte ?`,o:[`Pour chercher la fleur d'argent qui guérira sa mère.`,`Pour voler le trésor du géant.`,`Pour se cacher de la pluie.`,`Pour réveiller le géant.`],a:0,sol:`« Je viens chercher la fleur d'argent pour guérir ma mère. »`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`À quoi la peau du géant est-elle comparée ?`,o:[`À l'écorce d'un vieux chêne.`,`À un nuage de mousse.`,`À du métal poli.`,`À une pierre précieuse.`],a:0,sol:`« grise et rugueuse comme l'écorce d'un vieux chêne » : le mot « comme » introduit la comparaison.`},
+ {k:'qcm',lv:'e',s:SK.per,q:`Comment Éloïse se comporte-t-elle devant le géant ?`,o:[`Elle est courageuse : elle recule d'un pas mais garde la tête haute.`,`Elle s'enfuit en criant.`,`Elle se met en colère.`,`Elle reste indifférente.`],a:0,sol:`« Éloïse recula d'un pas, mais elle garda la tête haute » : elle a peur, mais elle tient bon.`},
+ {k:'qcm',lv:'h',s:SK.voc,q:`« Gronda-t-il d'une voix de tonnerre » : comment est la voix du géant ?`,o:[`Très forte et grave`,`Douce et aiguë`,`Hésitante et timide`,`Muette`],a:0,sol:`Le tonnerre est un bruit puissant et grave : la voix du géant est impressionnante.`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Que révèle le rire du géant sur son caractère ?`,o:[`Il est moins terrible qu'il n'en a l'air.`,`Il se moque cruellement d'Éloïse.`,`Il a peur de la fillette.`,`Il est devenu fou.`],a:0,sol:`Après un long silence, il rit puis lui offre la fleur : sa taille fait peur, mais il est bienveillant.`},
+ {k:'qcm',lv:'b',s:SK.jus,q:`Quelle phrase du géant montre qu'il accepte d'aider Éloïse ?`,o:[`« Prends-la, petite. »`,`« Qui ose troubler mon sommeil ? »`,`« Les hommes viennent ici pour mon trésor »`,`« Il était si grand que sa tête touchait presque le plafond »`],a:0,sol:`« Prends-la » : il lui donne la fleur. Les autres phrases montrent sa colère, ses critiques des hommes, ou le décrivent.`},
+ {k:'qcm',lv:'b',s:SK.tps,q:`Pourquoi le texte emploie-t-il l'imparfait dans « Il était si grand que sa tête touchait presque le plafond » ?`,o:[`Pour décrire le géant.`,`Pour raconter une action rapide.`,`Pour exprimer le futur.`,`Pour donner un ordre.`],a:0,sol:`L'imparfait sert à décrire et à parler de ce qui dure. Le passé simple (« recula », « éclata ») raconte les actions qui s'enchaînent.`}]},
+
+roi:{id:'roi',title:'Le roi déguisé',body:`Le roi Aldric, las des flatteries de la cour, décida un matin de vérifier ce que ses sujets pensaient de lui. Il revêtit les habits rapiécés d'un colporteur, se noircit les joues de suie et quitta le château par la porte des cuisines.
+Au marché, il s'approcha d'une vieille marchande de pommes.
+— Que dit-on du roi, bonne dame ?
+— Du roi ? soupira-t-elle. On dit qu'il vit dans l'or pendant que nous comptons nos sous. Mais ne répétez pas cela : les gardes ont des oreilles partout.
+Le roi, vexé, poursuivit son chemin et entendit, de bouche en bouche, les mêmes plaintes. Le soir, de retour au palais, il resta longtemps silencieux. Puis il fit appeler son trésorier.
+— Demain, dit-il, vous baisserez les impôts de moitié.
+Le trésorier, stupéfait, n'osa pas répondre. Il n'avait jamais vu son maître aussi pensif ni aussi sage.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Comment s'appelle le roi ?`,g:[['aldric']],ans:`Aldric`,sol:`« Le roi Aldric ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Pourquoi le roi se déguise-t-il ?`,o:[`Pour savoir ce que ses sujets pensent de lui.`,`Pour échapper aux gardes.`,`Pour jouer un tour à son trésorier.`,`Pour acheter des pommes.`],a:0,sol:`« décida un matin de vérifier ce que ses sujets pensaient de lui ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Par où le roi quitte-t-il le château ?`,o:[`Par la porte des cuisines.`,`Par la grande porte du palais.`,`Par un souterrain secret.`,`Par une fenêtre de la tour.`],a:0,sol:`« quitta le château par la porte des cuisines ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Quelle décision le roi prend-il à la fin ?`,o:[`Baisser les impôts de moitié.`,`Punir la marchande de pommes.`,`Quitter son royaume.`,`Doubler les impôts.`],a:0,sol:`« vous baisserez les impôts de moitié ».`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Pourquoi la marchande dit-elle « les gardes ont des oreilles partout » ?`,o:[`Elle a peur d'être punie si on l'entend critiquer le roi.`,`Elle trouve que les gardes sont sourds.`,`Elle veut vendre plus de pommes.`,`Elle ne connaît pas le roi.`],a:0,sol:`Cette expression montre qu'on peut être espionné : elle conseille de ne pas répéter ses critiques.`},
+ {k:'qcm',lv:'h',s:SK.fig,q:`« Les gardes ont des oreilles partout » : que fait cette expression ?`,o:[`Elle exagère pour dire que les gardes écoutent tout le monde.`,`Elle décrit des gardes qui ont vraiment de grandes oreilles.`,`Elle compare les gardes à des animaux.`,`Elle pose une question.`],a:0,sol:`C'est une image : les gardes ne sont pas partout, mais on a l'impression qu'ils entendent tout. Cette exagération s'appelle une hyperbole.`},
+ {k:'qcm',lv:'b',s:SK.per,q:`Comment le roi change-t-il au cours de l'histoire ?`,o:[`Il comprend que ses sujets souffrent et décide de les aider.`,`Il devient plus cruel.`,`Il se désintéresse de son royaume.`,`Il refuse d'écouter ses sujets.`],a:0,sol:`D'abord « vexé », il reste « longtemps silencieux », puis il agit : le trésorier le trouve « pensif » et « sage ».`},
+ {k:'qcm',lv:'b',s:SK.voc,q:`« Las des flatteries de la cour » : que signifie « las » ?`,o:[`Fatigué, dégoûté`,`Heureux`,`Surpris`,`Honteux`],a:0,sol:`Le roi n'aime plus les compliments exagérés (les flatteries) : il en est fatigué. C'est pourquoi il veut connaître la vérité.`}]},
+
+/* ---------- Héros et héroïnes ---------- */
+tempete:{id:'tempete',title:'La tempête sur la Pointe',body:`Ce matin-là, le port de Camaret dormait encore sous une brume épaisse. Léna, douze ans, sauta sur le pont du Goéland en serrant contre elle son sac de toile. Son oncle Yvon, un marin à la barbe grise, l'attendait près des filets.
+— Tu es sûre de vouloir venir ? demanda-t-il. La mer n'est pas toujours aimable.
+— J'en rêve depuis des mois, répondit-elle d'une voix qu'elle voulait ferme.
+Vers midi, le vent se leva brusquement. Le ciel, noir comme de l'encre, se déchira d'un éclair, et des vagues hautes comme des maisons se mirent à frapper la coque. Léna, accrochée au bastingage, sentit son cœur cogner dans sa poitrine. Elle avait terriblement peur, mais elle n'osait pas l'avouer.
+— Tiens la barre ! cria Yvon. Je vais affaler la voile !
+Elle obéit, les bras tremblants. Le bateau pencha, hésita, puis se redressa. Au bout d'une heure interminable, le vent faiblit et un rayon de soleil perça les nuages. Yvon posa sa lourde main sur l'épaule de sa nièce.
+— Tu as l'étoffe d'une vraie navigatrice, dit-il simplement.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Comment s'appelle le bateau ?`,g:[['goeland']],ans:`Le Goéland`,sol:`« Léna, douze ans, sauta sur le pont du Goéland ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Quel âge a Léna ?`,o:[`Douze ans`,`Dix ans`,`Onze ans`,`Treize ans`],a:0,sol:`« Léna, douze ans, sauta sur le pont ».`},
+ {k:'qcm',lv:'e',s:SK.nar,q:`À quelle personne ce récit est-il écrit ?`,o:[`À la troisième personne : le narrateur n'est pas un personnage.`,`À la première personne : le narrateur est Léna.`,`À la deuxième personne : le narrateur s'adresse au lecteur.`],a:0,sol:`Le narrateur dit « Léna », « elle », « son oncle » : il raconte de l'extérieur. À la première personne, on lirait « je ».`},
+ {k:'qcm',lv:'e',s:SK.per,q:`Quel sentiment Léna éprouve-t-elle pendant la tempête ?`,o:[`La peur`,`La colère`,`L'ennui`,`La joie`],a:0,sol:`« Elle avait terriblement peur, mais elle n'osait pas l'avouer. »`},
+ {k:'ord',lv:'h',s:SK.chr,q:`Remets ces événements dans l'ordre du récit.`,items:[`Yvon félicite sa nièce.`,`Léna monte à bord du Goéland.`,`Léna prend la barre.`,`Le vent se lève violemment.`],a:'BDCA',sol:`Léna monte à bord (B), le vent se lève (D), elle prend la barre (C), puis Yvon la félicite (A). Ordre : B D C A.`},
+ {k:'qcm',lv:'h',s:SK.fig,q:`« Le ciel, noir comme de l'encre » : quelle figure de style est utilisée ?`,o:[`Une comparaison`,`Une métaphore`,`Une personnification`,`Une répétition`],a:0,sol:`Le mot « comme » relie le ciel (noir) à l'encre : c'est une comparaison. Sans « comme », ce serait une métaphore.`},
+ {k:'qcm',lv:'b',s:SK.inf,q:`Pourquoi Léna n'ose-t-elle pas avouer sa peur ?`,o:[`Elle veut prouver à son oncle qu'elle est courageuse.`,`Elle a déjà oublié sa peur.`,`Son oncle lui a interdit de parler.`,`Elle n'a plus de voix pour crier.`],a:0,sol:`Elle répondait déjà « d'une voix qu'elle voulait ferme » : elle veut paraître courageuse. Le texte ne le dit pas directement, il faut le déduire.`},
+ {k:'qcm',lv:'b',s:SK.voc,q:`Dans « un rayon de soleil perça les nuages », que signifie « perça » ?`,o:[`Traversa`,`Cacha`,`Chauffa`,`Effaça`],a:0,sol:`Le soleil passe à travers les nuages : « perça » veut dire « traversa ». Le contexte (rayon, nuages) le fait comprendre.`}]},
+
+coffre:{id:'coffre',title:'Le coffre du grenier',body:`Les vacances chez ma grand-mère commençaient toujours de la même façon : il pleuvait. Cet été-là, pour me distraire, je grimpai au grenier, une pièce sombre qui sentait la poussière et le vieux bois.
+Dans un coin, sous une couverture trouée, j'aperçus un coffre en cuir, cerclé de fer. La serrure était rouillée, mais elle céda au premier coup de tournevis. À l'intérieur, entre une boussole cassée et un chapeau mangé par les mites, je découvris une carte jaunie. Une croix rouge marquait l'emplacement d'un vieux chêne, au fond du jardin.
+Mon cœur battait si fort que j'en avais mal aux oreilles. Je dévalai l'escalier, attrapai une pelle et courus sous la pluie. Sous les racines du chêne, ma pelle heurta quelque chose de dur : une petite boîte en métal. Elle contenait une lettre de mon grand-père, écrite quand il avait mon âge : « Si tu lis ces lignes, c'est que tu as le goût de l'aventure. Garde-le toute ta vie. »`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Dans quelle pièce de la maison le narrateur trouve-t-il le coffre ?`,g:[['grenier']],ans:`Le grenier`,sol:`« je grimpai au grenier » puis « j'aperçus un coffre en cuir ».`},
+ {k:'qcm',lv:'e',s:SK.nar,q:`Qui raconte l'histoire ?`,o:[`Le garçon qui vit l'aventure (le narrateur est un personnage).`,`Un narrateur extérieur à l'histoire.`,`La grand-mère.`,`Le grand-père.`],a:0,sol:`« je grimpai », « j'aperçus » : le narrateur dit « je » et participe à l'action. C'est un récit à la première personne.`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que trouve le narrateur à l'intérieur du coffre ?`,o:[`Une boussole cassée, un chapeau abîmé et une carte.`,`Des pièces d'or.`,`Une lettre et une pelle.`,`Un tournevis et une couverture.`],a:0,sol:`« entre une boussole cassée et un chapeau mangé par les mites, je découvris une carte jaunie ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que marque la croix rouge sur la carte ?`,o:[`L'emplacement d'un vieux chêne.`,`La maison de la grand-mère.`,`Le grenier.`,`Une rivière.`],a:0,sol:`« Une croix rouge marquait l'emplacement d'un vieux chêne, au fond du jardin. »`},
+ {k:'qcm',lv:'h',s:SK.tps,q:`« Je grimpai au grenier » : à quel temps est le verbe « grimpai » ?`,o:[`Au passé simple`,`À l'imparfait`,`Au présent`,`Au futur`],a:0,sol:`La terminaison « -ai » à la première personne du singulier indique le passé simple, temps des actions de premier plan. À l'imparfait, on aurait « je grimpais ».`},
+ {k:'qcm',lv:'h',s:SK.voc,q:`« La serrure était rouillée, mais elle céda au premier coup de tournevis » : que signifie « céda » ?`,o:[`S'ouvrit, ne résista plus`,`Se cassa en deux`,`Disparut`,`Brilla`],a:0,sol:`Le coffre s'ouvre : la serrure « cède », c'est-à-dire qu'elle ne résiste plus.`},
+ {k:'qcm',lv:'b',s:SK.inf,q:`Qui a caché le coffre, et quand ?`,o:[`Le grand-père, quand il était enfant, pour celui qui le découvrirait.`,`Le grand-père, la semaine dernière.`,`La grand-mère, pour faire une surprise.`,`Le narrateur lui-même.`],a:0,sol:`La lettre est « écrite quand il avait mon âge » : le grand-père l'a écrite enfant. Le texte ne le dit pas en une phrase : il faut rapprocher les indices.`},
+ {k:'qcm',lv:'b',s:SK.per,q:`Que montre la phrase « Mon cœur battait si fort que j'en avais mal aux oreilles » ?`,o:[`Une grande excitation`,`Une maladie`,`De la tristesse`,`De l'ennui`],a:0,sol:`L'exagération (« mal aux oreilles ») traduit une émotion forte : l'excitation de la découverte.`}]},
+
+desert:{id:'desert',title:'La tempête de sable',body:`Depuis trois jours, la caravane avançait dans un désert qui semblait ne jamais finir. Les dunes se succédaient, pareilles à de grosses vagues dorées, et le soleil, impitoyable, écrasait les voyageurs de sa chaleur. Le jeune guide, Amadou, marchait en tête, le visage caché sous un chèche bleu. Il connaissait ces sables comme sa poche, mais ce matin-là, une inquiétude lui serrait la gorge : l'eau commençait à manquer.
+Soudain, le vent se mit à hurler. Un nuage roux s'éleva à l'horizon et se précipita vers eux, avalant les dunes les unes après les autres.
+— Une tempête de sable ! cria Amadou. Couchez les chameaux et couvrez-vous le visage !
+Pendant des heures, le sable fouetta les bâches et siffla aux oreilles des voyageurs, qui se serraient les uns contre les autres. Quand le silence revint enfin, le désert avait changé de visage : une immense dune neuve s'était dressée là où s'étendait la plaine. Amadou, soulagé, scruta le ciel étoilé, puis il sourit : une étoile brillante lui indiquait la route du puits.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Quel est le prénom du guide ?`,g:[['amadou']],ans:`Amadou`,sol:`« Le jeune guide, Amadou, marchait en tête ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Quel problème inquiète Amadou avant la tempête ?`,o:[`Le manque d'eau`,`La fatigue des chameaux`,`La présence de voleurs`,`La nuit qui tombe`],a:0,sol:`« une inquiétude lui serrait la gorge : l'eau commençait à manquer ».`},
+ {k:'qcm',lv:'e',s:SK.ide,q:`Quel titre convient le mieux à ce texte ?`,o:[`Dans la tempête de sable`,`Le marché de Tombouctou`,`Le retour à la maison`,`La fête des chameaux`],a:0,sol:`Le texte raconte une caravane surprise par une tempête de sable et guidée par Amadou. Un bon titre résume l'idée principale.`},
+ {k:'qcm',lv:'e',s:SK.voc,q:`« Le soleil, impitoyable » : que signifie « impitoyable » ?`,o:[`Qui n'a aucune pitié, très dur`,`Très agréable`,`Très lointain`,`Très brillant`],a:0,sol:`Le préfixe « im- » exprime le contraire : sans pitié. Ici, la chaleur écrase les voyageurs.`},
+ {k:'qcm',lv:'h',s:SK.fig,q:`« Les dunes se succédaient, pareilles à de grosses vagues dorées » : quelle figure de style est utilisée ?`,o:[`Une comparaison`,`Une métaphore`,`Une personnification`,`Une énumération`],a:0,sol:`Les dunes sont rapprochées de vagues grâce à l'expression « pareilles à » : c'est une comparaison.`},
+ {k:'qcm',lv:'h',s:SK.fig,q:`« Le vent se mit à hurler » : quelle figure de style est utilisée ?`,o:[`Une personnification`,`Une comparaison`,`Une énumération`,`Une répétition`],a:0,sol:`« Hurler » est un verbe qui s'applique aux êtres vivants : le vent est présenté comme un être vivant. C'est une personnification.`},
+ {k:'qcm',lv:'b',s:SK.inf,q:`Que signifie la phrase « le désert avait changé de visage » ?`,o:[`Le paysage n'était plus le même après la tempête.`,`Le désert est devenu un visage humain.`,`Amadou a changé de masque.`,`Les voyageurs se sont perdus.`],a:0,sol:`Le texte précise : « une immense dune neuve s'était dressée là où s'étendait la plaine ». « Changer de visage » est une image pour dire que le paysage a changé.`},
+ {k:'qcm',lv:'b',s:SK.jus,q:`Quelle phrase prouve qu'Amadou connaît très bien la région ?`,o:[`« Il connaissait ces sables comme sa poche »`,`« Le jeune guide, Amadou, marchait en tête »`,`« le soleil, impitoyable, écrasait les voyageurs »`,`« Couchez les chameaux et couvrez-vous le visage ! »`],a:0,sol:`« comme sa poche » signifie « parfaitement ». C'est la seule phrase qui parle de sa connaissance du désert.`}]},
+
+/* ---------- Mystères et frissons ---------- */
+marais:{id:'marais',title:'La bête du marais',body:`Au village de Saint-Aubin, on racontait qu'une bête étrange vivait dans le marais. Les anciens parlaient d'une créature immense, couverte d'écailles vertes, dont les yeux brillaient la nuit comme deux lanternes. Chaque soir, les mères rappelaient leurs enfants avant le coucher du soleil.
+Pourtant, Thomas, dix ans, ne croyait pas à ces histoires. Un soir de pleine lune, il s'avança sur le chemin de planches qui traversait la vase. Le brouillard lui mouillait le visage, et les grenouilles se turent d'un seul coup. Quelque chose bougea dans les roseaux. Thomas se figea.
+Deux yeux dorés l'observaient. Lentement, une silhouette sortit de l'ombre : c'était un énorme crocodile albinos, échappé d'un cirque depuis des mois, maigre et blessé à la patte. Thomas, au lieu de fuir, sentit sa peur se changer en pitié. Le lendemain, il alerta le vétérinaire, et le « monstre » du marais fut soigné puis envoyé dans un parc animalier.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Comment s'appelle le village ?`,g:[['saint aubin']],ans:`Saint-Aubin`,sol:`« Au village de Saint-Aubin ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Comment les anciens décrivent-ils la bête ?`,o:[`Immense, couverte d'écailles vertes, avec des yeux qui brillent la nuit.`,`Petite et couverte de poils.`,`Invisible et silencieuse.`,`Rouge, avec de grandes ailes.`],a:0,sol:`« une créature immense, couverte d'écailles vertes, dont les yeux brillaient la nuit ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que font les mères chaque soir ?`,o:[`Elles rappellent leurs enfants avant le coucher du soleil.`,`Elles vont chasser la bête.`,`Elles chantent des chansons aux enfants.`,`Elles ferment les portes du village.`],a:0,sol:`« Chaque soir, les mères rappelaient leurs enfants avant le coucher du soleil. »`},
+ {k:'ord',lv:'e',s:SK.chr,q:`Remets ces événements dans l'ordre du récit.`,items:[`Thomas alerte le vétérinaire.`,`Une silhouette sort de l'ombre.`,`Thomas s'avance sur le chemin de planches.`,`Les grenouilles se taisent.`],a:'CDBA',sol:`Thomas s'avance (C), les grenouilles se taisent (D), la silhouette sort de l'ombre (B), puis Thomas alerte le vétérinaire (A). Ordre : C D B A.`},
+ {k:'qcm',lv:'h',s:SK.chr,q:`Quel passage correspond au dénouement (la fin de l'histoire) ?`,o:[`Le « monstre » est soigné puis envoyé dans un parc animalier.`,`Les anciens racontent des légendes.`,`Thomas s'avance sur le chemin de planches.`,`Les grenouilles se taisent.`],a:0,sol:`Le dénouement résout le problème de départ. Ici, la « bête » est découverte et soignée.`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Pourquoi le mot « monstre » est-il entre guillemets à la fin ?`,o:[`Parce que la créature n'est pas vraiment un monstre : c'est un animal blessé.`,`Parce que c'est une citation d'un livre.`,`Parce que c'est un mot étranger.`,`Parce que Thomas l'a inventé.`],a:0,sol:`Les guillemets montrent que ce mot est celui des villageois : la créature n'est qu'un crocodile maigre et blessé.`},
+ {k:'qcm',lv:'b',s:SK.fig,q:`« Ses yeux brillaient la nuit comme deux lanternes » : à quoi sert cette comparaison ?`,o:[`À rendre la créature inquiétante.`,`À faire rire le lecteur.`,`À expliquer un fait scientifique.`,`À décrire la lune.`],a:0,sol:`Deux lumières dans l'obscurité font penser à un regard effrayant : l'image installe la peur.`},
+ {k:'qcm',lv:'b',s:SK.per,q:`Comment les sentiments de Thomas évoluent-ils face à la créature ?`,o:[`La peur se change en pitié.`,`La pitié se change en colère.`,`L'ennui se change en joie.`,`La colère se change en peur.`],a:0,sol:`« sentit sa peur se changer en pitié » : Thomas voit un animal blessé et non plus un monstre.`}]},
+
+masques:{id:'masques',title:'Le marchand de masques',body:`Chaque année, à la veille du carnaval, la place de Valmont se remplissait de masques de toutes les couleurs. Ce soir-là, un marchand inconnu, vêtu d'un long manteau, proposait un masque d'argent à la mine étrangement sérieuse.
+— Il ne se vend pas, dit-il à Clara, qui s'était arrêtée devant l'étal. Il se prête, pour une nuit seulement.
+Intriguée, la jeune fille l'enfila. Aussitôt, sa voix lui parut plus grave, ses gestes plus assurés. Au bal, personne ne la reconnut. Elle osa alors dire à son voisin, le terrible monsieur Garnier, ce qu'elle n'aurait jamais dit à visage découvert : que ses cris faisaient peur aux enfants.
+Le lendemain, Clara retira le masque, le cœur léger, et le rendit au marchand.
+— Il n'a rien de magique, n'est-ce pas ? murmura-t-elle. C'est moi qui ai trouvé le courage.
+Le marchand haussa les épaules et se perdit dans la foule.`,qs:[
+ {k:'kw',lv:'e',s:SK.rep,q:`Quel est le prénom de la jeune fille ?`,g:[['clara']],ans:`Clara`,sol:`« dit-il à Clara, qui s'était arrêtée devant l'étal ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Où le marchand installe-t-il son étal ?`,o:[`Sur la place de Valmont`,`Dans une école`,`Sur un bateau`,`Dans un château`],a:0,sol:`« la place de Valmont se remplissait de masques ». Un étal est une table où l'on expose ce qu'on vend.`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que dit le marchand à propos du masque d'argent ?`,o:[`Il ne se vend pas : il se prête pour une nuit seulement.`,`Il est gratuit.`,`Il porte malheur.`,`Il est très ancien.`],a:0,sol:`« Il ne se vend pas [...]. Il se prête, pour une nuit seulement. »`},
+ {k:'qcm',lv:'e',s:SK.per,q:`Comment se sent Clara le lendemain, quand elle retire le masque ?`,o:[`Soulagée, le cœur léger`,`Honteuse`,`Terrifiée`,`Furieuse`],a:0,sol:`« Clara retira le masque, le cœur léger » : elle est soulagée et fière.`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Pourquoi Clara ose-t-elle parler à monsieur Garnier ?`,o:[`Parce que le masque lui donne l'impression que personne ne la reconnaît.`,`Parce qu'il est son meilleur ami.`,`Parce qu'il le lui a demandé.`,`Parce qu'elle est en colère contre le marchand.`],a:0,sol:`« Au bal, personne ne la reconnut » : sous le masque, elle ose dire ce qu'elle n'aurait jamais dit à visage découvert.`},
+ {k:'qcm',lv:'h',s:SK.jus,q:`Quelle phrase prouve que Clara change de comportement avec le masque ?`,o:[`« Aussitôt, sa voix lui parut plus grave, ses gestes plus assurés »`,`« la place de Valmont se remplissait de masques »`,`« un marchand inconnu, vêtu d'un long manteau »`,`« Le lendemain, Clara retira le masque »`],a:0,sol:`Seule cette phrase décrit un changement de voix et de gestes, juste après avoir enfilé le masque.`},
+ {k:'qcm',lv:'b',s:SK.ide,q:`Que veut montrer l'auteur à la fin du texte ?`,o:[`Le courage vient de soi, pas du masque.`,`Les masques sont magiques.`,`Il ne faut jamais parler aux inconnus.`,`Le marchand est un sorcier.`],a:0,sol:`Clara dit elle-même : « Il n'a rien de magique [...]. C'est moi qui ai trouvé le courage. »`},
+ {k:'qcm',lv:'b',s:SK.voc,q:`« Le cœur léger » : que signifie cette expression ?`,o:[`Être soulagé, sans inquiétude`,`Avoir une maladie du cœur`,`Être très triste`,`Avoir peur`],a:0,sol:`Un cœur « léger » n'est plus chargé de soucis : Clara est soulagée d'avoir parlé.`}]},
+
+loup:{id:'loup',title:'La nuit du loup',body:`Je n'ai jamais cru aux loups-garous, jusqu'à cette nuit d'hiver où la neige étouffait les bruits du village. Je rentrais de chez mon ami Gaspard, une lampe-torche à la main, quand un hurlement déchira le silence. Je m'arrêtai net. Derrière le muret du cimetière, une ombre immense se dressait, silhouette à demi humaine, à demi animale.
+Mes jambes refusaient d'avancer. Je braquai ma lampe : le faisceau éclaira un manteau de fourrure, des bottes de boue, et deux yeux qui me fixaient. L'ombre fit un pas, puis un second, et prononça d'une voix éraillée : « N'aie pas peur, petit, je cherche seulement mon chien. »
+C'était le vieux Marcel, le berger, qui venait de perdre sa bête dans le brouillard. Nous avons cherché ensemble pendant une heure. Quand le chien reparut enfin, j'éclatai de rire, mais je jure que, ce soir-là, j'ai marché plus vite que d'habitude.`,qs:[
+ {k:'qcm',lv:'e',s:SK.nar,q:`Qui raconte l'histoire ?`,o:[`Le narrateur, qui est aussi le personnage principal.`,`Marcel le berger.`,`Gaspard.`,`Un narrateur extérieur à l'histoire.`],a:0,sol:`« Je n'ai jamais cru », « Je rentrais », « Je braquai ma lampe » : le narrateur dit « je ». Il raconte ce qu'il a vécu.`},
+ {k:'kw',lv:'e',s:SK.rep,q:`Comment s'appelle le berger ?`,g:[['marcel']],ans:`Marcel`,sol:`« C'était le vieux Marcel, le berger ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`Que cherche le berger ?`,o:[`Son chien`,`Son manteau`,`Un loup-garou`,`Son ami Gaspard`],a:0,sol:`« je cherche seulement mon chien ».`},
+ {k:'qcm',lv:'e',s:SK.rep,q:`En quelle saison se passe l'histoire ?`,o:[`En hiver`,`En été`,`Au printemps`,`En automne`],a:0,sol:`« cette nuit d'hiver où la neige étouffait les bruits du village ».`},
+ {k:'qcm',lv:'h',s:SK.fig,q:`« Un hurlement déchira le silence » : quelle figure de style est utilisée ?`,o:[`Une métaphore`,`Une comparaison`,`Une énumération`,`Une question`],a:0,sol:`Le silence est « déchiré » comme du papier, sans le mot « comme » : c'est une métaphore.`},
+ {k:'qcm',lv:'h',s:SK.inf,q:`Pourquoi le narrateur dit-il avoir « marché plus vite que d'habitude » à la fin ?`,o:[`Il a encore un peu peur malgré l'explication.`,`Il était en retard.`,`Il courait pour rejoindre Gaspard.`,`Il avait froid.`],a:0,sol:`Il a ri, mais la frayeur ne s'est pas tout à fait dissipée. Le ton est humoristique : « je jure que ».`},
+ {k:'qcm',lv:'b',s:SK.ide,q:`Quel effet l'auteur recherche-t-il avec ce récit ?`,o:[`Faire croire à un monstre, puis révéler une explication simple et rassurante.`,`Faire peur jusqu'à la dernière ligne.`,`Enseigner le métier de berger.`,`Décrire un village sous la neige.`],a:0,sol:`Le suspense monte (hurlement, ombre immense), puis la chute rassure : ce n'était que le berger. C'est un récit qui joue avec la peur.`},
+ {k:'qcm',lv:'b',s:SK.chr,q:`Quel est l'élément perturbateur du récit ?`,o:[`Le hurlement dans la nuit`,`Le retour du chien`,`Le départ de chez Gaspard`,`Le rire du narrateur`],a:0,sol:`L'élément perturbateur est l'événement qui brise le calme de départ : le hurlement qui « déchira le silence ».`}]}
+};
+
+/* ----- Fabrique de questions à partir des données ----- */
+function frGen(t,d){
+  const f=function(){
+    const base={skill:d.s,text:{id:t.id,title:t.title,body:t.body},sol:d.sol};
+    if(d.k==='qcm'){const right=d.o[d.a];return Object.assign(base,{q:d.q,t:'choice',a:[right],keys:shuffle(d.o),long:true,show:esc(right)})}
+    if(d.k==='kw')return Object.assign(base,{q:d.q,t:'kw',groups:d.g,native:true,show:esc(d.ans),hint:'Réponds en quelques mots'});
+    return Object.assign(base,{q:d.q+'<div class="items">'+d.items.map((x,i)=>`<p class="item"><b>${'ABCDEF'[i]}</b><span>${esc(x)}</span></p>`).join('')+'</div>',t:'ord',a:d.a,native:true,show:esc(d.a.split('').join(' ')),hint:"Écris les lettres dans l'ordre, par exemple : B D A C"})};
+  f.lv=d.lv;return f}
+function frWorld(id,name,chap,color,glyph,keys,names){
+  const gens=keys.map(k=>FR_TEXTS[k].qs.map(d=>frGen(FR_TEXTS[k],d)));
+  const all=gens.flat(),hs=all.filter(g=>g.lv==='h'),bs=all.filter(g=>g.lv==='b'),hb=hs.concat(bs);
+  const mk=l=>l.map(g=>g());
+  return{id,name,chap,color,glyph,levels:[
+    {name:names[0],kind:'easy',gens:gens[0],build:()=>mk(gens[0])},
+    {name:names[1],kind:'easy',gens:gens[1],build:()=>mk(gens[1])},
+    {name:names[2],kind:'hard',gens:gens[2],build:()=>shuffle(mk(gens[2]))},
+    {name:names[3],kind:'hard',gens:hb,build:()=>shuffle(mk(shuffle(hb).slice(0,8)))},
+    {name:names[4],kind:'boss',gens:hb,build:()=>shuffle(mk(shuffle(bs).concat(shuffle(hs)).slice(0,10)))}]}}
+const FR_WORLDS=[
+  frWorld('fr-conte','Contes et fables','Lecture · thème 1','var(--w1)','❝❞',['chevre','geant','roi'],['La chèvre et le loup','Le géant de la grotte','Le roi déguisé','Ruses et sagesses','Le Conteur Rusé']),
+  frWorld('fr-heros','Héros et héroïnes','Lecture · thème 2','var(--w2)','⚔',['tempete','coffre','desert'],['La tempête sur la Pointe','Le coffre du grenier','La tempête de sable','Épreuves et courage','Le Gardien des Épreuves']),
+  frWorld('fr-myst','Mystères et frissons','Lecture · thème 3','var(--w3)','☾',['marais','masques','loup'],['La bête du marais','Le marchand de masques','La nuit du loup','Peurs et vérités','La Bête sans nom'])];
+CURRICULA.francais={label:'Français',title:'Lecture','5e':FR_WORLDS};
 
 /* =====================================================================
    INTERFACE : profils, parties, synchro, espace parent
@@ -756,14 +938,14 @@ function loginView(msg){
 /* ----- Accueil ----- */
 function localRows(){return PD().stats||[]}
 function home(){
-  G=null;app.className='';const p=ST.profile,worlds=cur(),subs=subjectsFor(p.niveau);
+  G=null;app.className='';REFMUL=subjMul(ST.subject);const p=ST.profile,worlds=cur(),subs=subjectsFor(p.niveau);
   if(!worlds.length){app.innerHTML=`<div class="screen"><header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>Bientôt <span>prêt</span></h1><p class="sub">Le programme de ${esc(p.niveau)} n'est pas encore dans l'appli. Il arrive.</p></header><button class="btn ghost" data-act="logout">Changer de joueur</button></div>`;return}
   const[t,mxs]=totals();const rows=localRows();
   const an=analyse(rows,new Set(getIdx().keys()));
   const tg=an.filter(o=>o.weak).sort((a,b)=>b.rate-a.rate).slice(0,3).map(o=>o.key);
   const hint=rows.length<15?"Un mélange de tout pour s'échauffer":tg.length?'Au programme : '+tg.join(', '):"Rien d'urgent : on révise un peu de tout";
   app.innerHTML=`<div class="screen">
-   <header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>Maths <span>Quest</span></h1><p class="sub">Quatre mondes, cinq niveaux chacun, et un boss au bout.</p>
+   <header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>${esc((CURRICULA[ST.subject]||{}).title||'Maths')} <span>Quest</span></h1><p class="sub">${['','Un','Deux','Trois','Quatre','Cinq'][worlds.length]||worlds.length} monde${worlds.length>1?'s':''}, cinq niveaux chacun, et un boss au bout.</p>
     <div class="totstars">${star(true)}<b>${t}</b> / ${mxs} étoiles</div></header>
    ${subs.length>1?`<div class="tabs">${subs.map(s=>`<button class="tab ${s===ST.subject?'on':''}" data-act="subject" data-s="${s}">${esc(CURRICULA[s].label)}</button>`).join('')}</div>`:''}
    <button class="train" data-act="train"><span class="tt">Entraînement du jour</span><span class="ts">10 questions choisies pour toi</span><span class="th">${esc(hint)}</span></button>
@@ -771,7 +953,7 @@ function home(){
      return `<button class="wcard" style="--wc:${w.color}" data-act="world" data-w="${wi}"><span class="glyph">${w.glyph}</span><span class="meta"><span class="chap">${w.chap}</span><h2>${w.name}</h2><span class="segs">${w.levels.map((l,li)=>`<i class="${(starsMap()[kid(wi,li)]||0)>=1?'on':''} ${l.kind==='boss'?'boss':''}"></i>`).join('')}</span><span class="count">${st} / ${w.levels.length*3} étoiles</span></span></button>`}).join('')}</div>
    <button class="btn ghost" data-act="bilan">Mon bilan</button>
    <p class="foot" data-sync>${syncText()}</p>
-   <p class="foot">8/10 au minimum pour débloquer le niveau suivant.<br><button class="linkbtn" data-act="logout">Changer de joueur</button></p></div>`;scrollTo(0,0)}
+   <p class="foot">Deux erreurs au maximum pour débloquer le niveau suivant.<br><button class="linkbtn" data-act="logout">Changer de joueur</button></p></div>`;scrollTo(0,0)}
 
 function world(wi){
   G=null;const w=cur()[wi];
@@ -782,7 +964,7 @@ function world(wi){
      const icon=!un?'<span>🔒</span>':boss?'<span>☠</span>':`<span>${li+1}</span>`;
      return `<button class="lvl ${boss?'boss':''} ${!un?'locked':st>=1?'done':''}" ${un?`data-act="start" data-w="${wi}" data-l="${li}"`:'aria-disabled="true"'}>
       <span class="node">${icon}</span><span class="info"><h3>${l.name}</h3><span class="tagrow"><span class="tag ${l.kind}">${l.kind==='easy'?'Facile':l.kind==='hard'?'Difficile':'Boss · 3 vies'}</span>${st!=null?starsRow(st):''}</span>
-      ${!un?`<span class="small">Fais 8/10 au niveau précédent</span>`:bestMap()[kid(wi,li)]?`<span class="small">Meilleur : ${bestMap()[kid(wi,li)]}</span>`:''}</span></button>`}).join('')}</div></div>`;scrollTo(0,0)}
+      ${!un?`<span class="small">Deux erreurs max. au niveau précédent</span>`:bestMap()[kid(wi,li)]?`<span class="small">Meilleur : ${bestMap()[kid(wi,li)]}</span>`:''}</span></button>`}).join('')}</div></div>`;scrollTo(0,0)}
 
 function newGame(spec,qs,wi,li){G={wi,li,spec,kind:spec.kind,qs,i:0,res:[],lives:3,s:'',c:0,sel:null,fb:null,warn:'',t0:0,acc:0,tStart:Date.now()};play()}
 function start(wi,li){const spec=cur()[wi].levels[li];newGame(spec,buildQuestions(spec),wi,li)}
@@ -814,7 +996,9 @@ function play(){
   const train=G.kind==='train',w=train?{color:'var(--w4)'}:cur()[G.wi],q=G.qs[G.i];
   const dots=G.qs.map((_,i)=>{const r=G.res[i];let c='';if(i===G.i&&!G.fb)c='cur';else if(r)c=immediate()?(r.ok?'ok':'ko'):(G.kind==='boss'?(r.ok?'done':'ko'):'done');return `<i class="${c}"></i>`}).join('');
   const head=`<div class="phead"><button class="back" data-act="quit" aria-label="Quitter">✕</button><div class="ttl"><b>${G.spec.name}</b><div class="dots">${dots}</div></div>${G.kind==='boss'?`<div class="hearts" id="hearts">${[0,1,2].map(i=>heart(i<G.lives)).join('')}</div>`:''}</div>`;
-  const qcard=`<div class="qcard"><span class="qnum">Question ${G.i+1} / ${G.qs.length}</span><div class="qtext">${q.q}</div></div>`;
+  const prevQ=G.qs[G.i-1],same=q.text&&prevQ&&prevQ.text&&prevQ.text.id===q.text.id&&!G.fb;
+  const passage=q.text?`<details class="passage"${same?'':' open'}><summary>${same?'Relire le texte : ':''}${esc(q.text.title)}</summary><div class="ptext">${q.text.body.split('\n').map(l=>`<p>${esc(l)}</p>`).join('')}</div></details>`:'';
+  const qcard=`${passage}<div class="qcard"><span class="qnum">Question ${G.i+1} / ${G.qs.length}</span><div class="qtext">${q.q}</div></div>`;
   if(G.fb){const r=G.fb;
     app.innerHTML=`<div class="play" style="--wc:${w.color}">${head}<div class="qzone">${qcard}
      <div class="fb ${r.ok?'ok':'ko'}"><h3>${r.ok?'Bien joué !':'Pas tout à fait'}</h3>${!r.ok&&r.msg?`<p class="errname">Erreur repérée : ${r.msg}</p>`:''}
@@ -822,14 +1006,15 @@ function play(){
      <div class="nextbar"><button class="btn world" data-act="next">${G.i+1<G.qs.length?'Question suivante':'Voir mon résultat'}</button></div></div>`;return}
   G.t0=performance.now();G.acc=0;
   const choice=!!q.keys;
-  const input=choice?'':`<div class="ansbox" id="ans" aria-live="polite"></div>${q.hint||hintFor(q)?`<p class="hint">${q.hint||hintFor(q)}</p>`:''}`;
-  const pad=choice?`<div class="choices">${q.keys.map(k=>`<button class="choice ${k.length>2?'word':''} ${G.sel===k?'sel':''}" data-act="choose" data-v="${k}">${k}</button>`).join('')}<button class="key go" data-act="submit">Valider</button></div>`:kb();
-  app.innerHTML=`<div class="play" style="--wc:${w.color}">${head}<div class="qzone">${qcard}${input}<p class="warn" id="warn">${G.warn}</p></div><div class="kbwrap">${pad}</div></div>`;
-  if(!choice)drawInput()}
+  const input=choice?'':q.native?`<input id="nat" class="natin" type="text" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Écris ta réponse ici" value="${esc(G.s)}">${q.hint?`<p class="hint">${q.hint}</p>`:''}`:`<div class="ansbox" id="ans" aria-live="polite"></div>${q.hint||hintFor(q)?`<p class="hint">${q.hint||hintFor(q)}</p>`:''}`;
+  const chHtml=choice?`<div class="choices ${q.long?'long':''}">${q.keys.map(k=>`<button class="choice ${k.length>2?'word':''} ${G.sel===k?'sel':''}" data-act="choose" data-v="${esc(k)}">${esc(k)}</button>`).join('')}${q.long?'':'<button class="key go" data-act="submit">Valider</button>'}</div>`:'';
+  const pad=choice?(q.long?`<div class="choices"><button class="key go" data-act="submit">Valider</button></div>`:chHtml):q.native?`<div class="choices"><button class="key go" data-act="submit">Valider</button></div>`:kb();
+  app.innerHTML=`<div class="play" style="--wc:${w.color}">${head}<div class="qzone">${qcard}${choice&&q.long?chHtml:''}${input}<p class="warn" id="warn">${G.warn}</p></div><div class="kbwrap">${pad}</div></div>`;
+  if(!choice&&!q.native)drawInput()}
 function key(k){if(k==='BS'){if(G.c>0){G.s=G.s.slice(0,G.c-1)+G.s.slice(G.c);G.c--}}else if(k==='L')G.c=Math.max(0,G.c-1);else if(k==='R')G.c=Math.min(G.s.length,G.c+1);else{G.s=G.s.slice(0,G.c)+k+G.s.slice(G.c);G.c+=k.length}
   if(G.warn){G.warn='';const w=document.getElementById('warn');if(w)w.textContent=''}drawInput()}
 function submit(){
-  const q=G.qs[G.i];const raw=q.keys?(G.sel||''):G.s;const r=check(q,raw);
+  const q=G.qs[G.i];const nat=q.native?document.getElementById('nat'):null;if(nat)G.s=nat.value;const raw=q.keys?(G.sel||''):G.s;const r=check(q,raw);
   if(r.invalid){G.warn=r.invalid;const w=document.getElementById('warn');if(w)w.textContent=r.invalid;return}
   const rec={ok:!!r.ok,raw,msg:r.msg||'',skill:q.skill,tag:r.ok?'':(r.tag||''),time:qTime()};G.res[G.i]=rec;
   if(!r.ok){const d=PD();const tag=r.tag||q.skill;d.errors[tag]=(d.errors[tag]||0)+1;saveST()}
@@ -859,7 +1044,7 @@ function finish(){
   saveST();flush();
   const title=train?'Entraînement terminé':G.kind==='boss'?(alive?'Boss vaincu !':'Le boss a gagné'):st===3?'Parfait !':st>=1?'Niveau réussi':'Encore un effort';
   const next=(!train&&G.li+1<w.levels.length)?G.li+1:null;
-  const verdict=train?"Chaque séance ajuste ce qu'on te propose ensuite.":G.kind==='boss'?(alive?`Tu as terrassé ${G.spec.name}. Toutes les étoiles du monde sont à toi${st<3?' — vise le sans-faute':''}.`:`Trois erreurs : le combat recommence avec de nouveaux exercices.`):st>=1?(next!==null&&!prev?`« ${w.levels[next].name} » est débloqué.`:"Rejoue pour gagner plus d'étoiles."):`Il faut 8/10 pour débloquer la suite. Les nombres changent à chaque partie.`;
+  const verdict=train?"Chaque séance ajuste ce qu'on te propose ensuite.":G.kind==='boss'?(alive?`Tu as terrassé ${G.spec.name}. Toutes les étoiles du monde sont à toi${st<3?' — vise le sans-faute':''}.`:`Trois erreurs : le combat recommence avec de nouveaux exercices.`):st>=1?(next!==null&&!prev?`« ${w.levels[next].name} » est débloqué.`:"Rejoue pour gagner plus d'étoiles."):(ST.subject==='francais'?`Il faut au plus deux erreurs pour débloquer la suite. Relis bien le texte, puis rejoue : les questions changent d'ordre.`:`Il faut 8/10 pour débloquer la suite. Les nombres changent à chaque partie.`);
   const items=G.qs.map((q,i)=>{const r=G.res[i];const cls=!r?'na':r.ok?'ok':'ko';const open=r&&!r.ok&&!immediate()?' open':'';
     return `<details class="it ${cls}"${open}><summary><span class="n">${i+1}.</span><span class="s">${!r?'Non traitée':r.ok?'Juste':'Faux'+(r.msg?' — '+r.msg.replace(/<[^>]+>/g,''):'')}</span></summary><div class="qtext">${q.q}</div><dl class="kv">${r?`<dt>Ta réponse</dt><dd>${rawHtml(r.raw)}</dd>`:''}<dt>Attendu</dt><dd>${pretty(q)}</dd></dl><div class="sol">${q.sol}</div></details>`}).join('');
   const wcol=train?'var(--w4)':w.color,wi=G.wi,li=G.li,kind=G.kind;
@@ -988,7 +1173,7 @@ function dashHTML(){
   const subjects=[...new Set([...att.map(a=>a.subject),...subjectsFor(p.niveau)])];
   if(!subjects.length)subjects.push('maths');
   if(!subjects.includes(PS.subj))PS.subj=subjects[0];
-  const subj=PS.subj;
+  const subj=PS.subj;REFMUL=subjMul(subj);
   const A=att.filter(a=>a.subject===subj),am=new Map(A.map(a=>[a.id,a]));
   const rows=ans.filter(r=>am.has(r.attempt_id)).map(r=>{const a=am.get(r.attempt_id);return{skill:r.skill,ok:r.ok,tag:r.error_tag||'',time_s:+r.time_s,at:a.played_at,kind:a.world==='train'?'hard':a.kind}});
   const curW=(CURRICULA[subj]||{})[p.niveau]||[];
@@ -1023,9 +1208,9 @@ function dashHTML(){
   /* rythme */
   const kinds=[['easy','Niveaux faciles'],['hard','Niveaux difficiles et entraînement'],['boss','Boss']];
   const pace=kinds.map(([k,lab])=>{const rr=rows.filter(r=>r.kind===k&&r.time_s>0);if(rr.length<5)return '';
-    const md=median(rr.map(r=>r.time_s)),ratio=md/REF[k];
+    const md=median(rr.map(r=>r.time_s)),ratio=md/refOf(k);
     const lbl=ratio>1.5?'<span class="pill mid">plus lent que le repère</span>':ratio<0.5?'<span class="pill mid">très rapide</span>':'<span class="pill good">rythme correct</span>';
-    return `<li><span>${lab}</span><b>${Math.round(md)} s</b><small>par question (repère ${REF[k]} s)</small>${lbl}</li>`}).join('');
+    return `<li><span>${lab}</span><b>${Math.round(md)} s</b><small>par question (repère ${Math.round(refOf(k))} s)</small>${lbl}</li>`}).join('');
   const rushed=an.filter(o=>o.rushed).map(o=>esc(o.key)),slow=an.filter(o=>o.slow).map(o=>esc(o.key));
   const paceHTML=`${pace?`<ul class="pace">${pace}</ul>`:'<p class="small">Pas encore assez de réponses chronométrées.</p>'}${rushed.length?`<p class="note">Va vite et se trompe : ${rushed.join(', ')}. Il relit probablement mal.</p>`:''}${slow.length?`<p class="note">Beaucoup plus lent que le repère : ${slow.join(', ')}.</p>`:''}<p class="small">Le chrono est invisible pour l'enfant. Les repères (60, 90 et 120 s par question) sont des ordres de grandeur.</p>`;
 
@@ -1098,7 +1283,7 @@ document.addEventListener('submit',async e=>{
   catch(er){toast('Impossible : '+er.message)}});
 document.addEventListener('keydown',e=>{if(!G||e.metaKey||e.ctrlKey)return;
   if(G.fb){if(e.key==='Enter'){e.preventDefault();advance()}return}
-  const q=G.qs[G.i];if(e.key==='Enter'){e.preventDefault();submit();return}if(q.keys)return;
+  const q=G.qs[G.i];if(e.key==='Enter'){e.preventDefault();submit();return}if(q.keys||q.native)return;
   const map={'*':'×','-':'−',Backspace:'BS',ArrowLeft:'L',ArrowRight:'R'};const k=map[e.key]||e.key;
   if(k.length===1&&/[0-9x+×−\/^()\[\]{};,√²∞∪ℝ∅.]/.test(k)||['BS','L','R'].includes(k)){e.preventDefault();key(k)}});
 
@@ -1114,7 +1299,6 @@ function route(){
 window.addEventListener('hashchange',route);
 route();
 }
-
 </script>
 </body>
 </html>
