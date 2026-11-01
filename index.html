@@ -938,6 +938,7 @@ function loginView(msg){
 /* ----- Accueil ----- */
 function localRows(){return PD().stats||[]}
 function home(){
+  if(ST.profile){const ok=subjectsFor(ST.profile.niveau);if(ok.length&&!ok.includes(ST.subject)){ST.subject=ok[0];saveST()}}
   G=null;app.className='';REFMUL=subjMul(ST.subject);const p=ST.profile,worlds=cur(),subs=subjectsFor(p.niveau);
   if(!worlds.length){app.innerHTML=`<div class="screen"><header class="hero"><p class="eyebrow">Salut ${esc(p.prenom)}</p><h1>Bientôt <span>prêt</span></h1><p class="sub">Le programme de ${esc(p.niveau)} n'est pas encore dans l'appli. Il arrive.</p></header><button class="btn ghost" data-act="logout">Changer de joueur</button></div>`;return}
   const[t,mxs]=totals();const rows=localRows();
