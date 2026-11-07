@@ -283,6 +283,7 @@ td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .natin{box-sizing:border-box;width:100%;min-height:56px;font:inherit;font-size:19px;border-radius:12px;border:2px solid var(--wc);background:var(--card);color:var(--ink);padding:0 14px}
 .natin:focus-visible{outline:3px solid var(--w4);outline-offset:1px}
 .choices.long{grid-template-columns:1fr;max-width:640px}
+.fig{display:block;width:100%;max-width:420px;height:auto;margin:10px auto 2px}.fig-s{max-width:200px}.fig .gl{stroke:var(--line);stroke-width:1}.fig .ga{stroke:var(--muted);stroke-width:1.6}.fig .gn{font:600 11px var(--f-math);fill:var(--muted)}.fig .gx{stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}.fig .gt{font:700 15px var(--f-body);fill:var(--ink)}.fig .gp{fill-opacity:.22;stroke-width:2.5;stroke-linejoin:round}.fig .gs{stroke:var(--muted);stroke-width:1.6;stroke-dasharray:5 4}.bigl{display:block;text-align:center;font:700 96px/1.1 var(--f-body);margin:6px 0}
 .choices.long .choice{font-size:16px;line-height:1.4;text-align:left;padding:10px 14px;height:auto}
 .items{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .item{display:flex;gap:10px;margin:0;font-size:16px;align-items:baseline}
@@ -355,23 +356,25 @@ function parseSet(src){
   return out.sort((a,b)=>('pt'in a?a.pt:a.lo)-('pt'in b?b.pt:b.lo))}
 const eqSet=(u,e)=>{const A=parseSet(u),B=parseSet(e);if(A.length!==B.length)return false;return A.every((a,i)=>{const b=B[i];if('pt'in a||'pt'in b)return('pt'in a)&&('pt'in b)&&eqNum(a.pt,b.pt);return eqNum(a.lo,b.lo)&&eqNum(a.hi,b.hi)&&a.lc===b.lc&&a.hc===b.hc})};
 const parseList=s=>norm0(s).split(';').filter(x=>x!=='').map(valN).sort((a,b)=>a-b);
+const parsePt=src=>{const k=norm0(src).replace(/^\(/,'').replace(/\)$/,'').split(';');if(k.length!==2)throw 0;return k.map(valN)};
+const eqPt=(u,e)=>{const A=parsePt(u),B=parsePt(e);return eqNum(A[0],B[0])&&eqNum(A[1],B[1])};
 const eqList=(u,e)=>{const A=parseList(u),B=parseList(e);return A.length===B.length&&A.every((v,i)=>eqNum(v,B[i]))};
 const nrm=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function topLevelSum(raw){const s=norm0(raw);let d=0;for(let i=0;i<s.length;i++){const c=s[i];if(c==='(')d++;else if(c===')')d--;else if(d===0&&(c==='+'||c==='-')&&i>0&&!'(*^/'.includes(s[i-1]))return true}return false}
 
 /* ----- vérification d'une réponse ----- */
-const EQ={num:(u,e)=>eqNum(valN(u),valN(e)),frac:(u,e)=>eqNum(valN(u),valN(e)),rad:(u,e)=>eqNum(valN(u),valN(e)),expr:eqExpr,set:eqSet,list:eqList};
+const EQ={num:(u,e)=>eqNum(valN(u),valN(e)),frac:(u,e)=>eqNum(valN(u),valN(e)),rad:(u,e)=>eqNum(valN(u),valN(e)),expr:eqExpr,set:eqSet,list:eqList,pt:eqPt};
 function check(q,raw){
   raw=String(raw||'').trim();
   if(!raw)return{invalid:q.t==='choice'?'Choisis une réponse.':'Écris une réponse avant de valider.'};
-  if(q.t==='choice'){let n=nrm(raw);return{ok:q.a.some(a=>nrm(a)===n)}}
+  if(q.t==='choice'){let n=nrm(raw);const ok=q.a.some(a=>nrm(a)===n);const tr=!ok&&q.tm&&q.tm[raw];return tr?{ok:false,msg:tr[0],tag:tr[1]}:{ok}}
   if(q.t==='kw'){const n=' '+nrm(raw).replace(/[^a-z0-9]+/g,' ').trim()+' ';
     return{ok:q.groups.every(g=>g.some(w=>n.includes(' '+w+' ')||n.includes(' '+w)))}}
   if(q.t==='ord'){const n=raw.toUpperCase().replace(/[^A-Z]/g,'');return{ok:n===q.a}}
   if(q.t==='dec')return checkDec(raw,q.n);
   let ok;
   try{ok=EQ[q.t](raw,q.a)}catch(e){
-    return{invalid:q.t==='set'?'Écriture non reconnue. Exemples : [2 ; 5[ , {−1 ; 4} , ∅. Sépare avec « ; ».':q.t==='list'?'Écriture non reconnue : sépare les nombres par « ; ».':'Écriture non reconnue : vérifie les parenthèses et les signes.'}}
+    return{invalid:q.t==='set'?'Écriture non reconnue. Exemples : [2 ; 5[ , {−1 ; 4} , ∅. Sépare avec « ; ».':q.t==='list'?'Écriture non reconnue : sépare les nombres par « ; ».':q.t==='pt'?'Écris les coordonnées ainsi : (3 ; 5).':'Écriture non reconnue : vérifie les parenthèses et les signes.'}}
   if(ok){
     if(q.t==='expr'&&q.form==='dev'&&/\(/.test(raw))return{ok:false,msg:"Le résultat est juste, mais il n'est pas développé : il reste des parenthèses.",tag:'Forme attendue'};
     if(q.t==='expr'&&q.form==='fact'&&(!/\(/.test(raw)||topLevelSum(raw)))return{ok:false,msg:"Le résultat est juste, mais il n'est pas factorisé : on attend un produit.",tag:'Forme attendue'};
@@ -573,6 +576,253 @@ const WORLDS=[
 /* Un paquet de contenu par matière et par niveau : CURRICULA.<matière>.<niveau> = liste de mondes.
    Pour ajouter l'histoire-géo de 5e : CURRICULA.histgeo={label:'Histoire-géo','5e':[...]} */
 const CURRICULA={maths:{label:'Maths',title:'Maths','2nde':WORLDS}};
+/* =====================================================================
+   MATHS 5e — manuel Bordas : ch. 1 obj. 1, ch. 2 obj. 1, ch. 8 obj. 1
+   ===================================================================== */
+const E5=s=>`<b class="m">${s}</b>`;
+const VF=['Vrai','Faux'],ON=['Oui','Non'];
+const dec5=v=>fmtD(Math.round(v*1e6)/1e6);
+
+/* ----- Figures sur quadrillage (SVG) ----- */
+function gridSvg(o){
+  const u=o.u||26,num=!!o.num,pl=num?26:12,pb=num?24:12,pr=16,pt=18,W=o.w*u+pl+pr,H=o.h*u+pt+pb;
+  const X=x=>pl+x*u,Y=y=>pt+(o.h-y)*u;let s='';
+  for(let i=0;i<=o.w;i++)s+=`<line x1="${X(i)}" y1="${Y(0)}" x2="${X(i)}" y2="${Y(o.h)}" class="gl"/>`;
+  for(let j=0;j<=o.h;j++)s+=`<line x1="${X(0)}" y1="${Y(j)}" x2="${X(o.w)}" y2="${Y(j)}" class="gl"/>`;
+  if(num){s+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(o.w)}" y2="${Y(0)}" class="ga"/><line x1="${X(0)}" y1="${Y(0)}" x2="${X(0)}" y2="${Y(o.h)}" class="ga"/>`;
+    for(let i=0;i<=o.w;i++)s+=`<text x="${X(i)}" y="${Y(0)+17}" class="gn" text-anchor="middle">${i}</text>`;
+    for(let j=1;j<=o.h;j++)s+=`<text x="${X(0)-7}" y="${Y(j)+4}" class="gn" text-anchor="end">${j}</text>`}
+  (o.polys||[]).forEach(p=>{s+=`<polygon points="${p.p.map(([x,y])=>X(x)+','+Y(y)).join(' ')}" class="gp" style="fill:${p.c};stroke:${p.c}"/>`});
+  (o.segs||[]).forEach(([a,b,c,d])=>{s+=`<line x1="${X(a)}" y1="${Y(b)}" x2="${X(c)}" y2="${Y(d)}" class="gs"/>`});
+  (o.pts||[]).forEach(p=>{const x=X(p.x),y=Y(p.y);
+    s+=`<path d="M${x-5} ${y-5}L${x+5} ${y+5}M${x-5} ${y+5}L${x+5} ${y-5}" class="gx"${p.c?` style="stroke:${p.c}"`:''}/><text x="${x+6}" y="${y-6}" class="gt"${p.c?` style="fill:${p.c}"`:''}>${p.l}</text>`});
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="${o.label||'Figure sur quadrillage'}">${s}</svg>`}
+const sym=(p,o)=>[2*o[0]-p[0],2*o[1]-p[1]];
+const inG=(p,w,h)=>p[0]>=0&&p[0]<=w&&p[1]>=0&&p[1]<=h;
+const ptS=p=>`(${p[0]} ; ${p[1]})`;
+const COL={f:'var(--w4)',g:'var(--w2)',o:'var(--w3)'};
+
+/* ---------- Monde 5e-1 : priorités des opérations ---------- */
+const M1VF=[
+ ['Dans 12 − 4 + 3, on commence par calculer 4 + 3.','Faux',"Sans parenthèses, additions et soustractions se font de gauche à droite : 12 − 4 = 8, puis 8 + 3 = 11."],
+ ['Dans 5 + 3 × 2, on commence par la multiplication.','Vrai',"La multiplication est prioritaire sur l'addition : 5 + 6 = 11."],
+ ['24 : 4 × 2 = 3','Faux',"Divisions et multiplications se font de gauche à droite : 24 : 4 = 6, puis 6 × 2 = 12."],
+ ['(8 + 2) × 3 = 8 + 2 × 3','Faux',"(8 + 2) × 3 = 10 × 3 = 30, alors que 8 + 2 × 3 = 8 + 6 = 14."],
+ ['7 × 4 + 6 = 6 + 4 × 7','Vrai',"Des deux côtés on trouve 28 + 6 = 34."],
+ ["On calcule toujours en premier ce qui est entre parenthèses.",'Vrai',"Les parenthèses passent avant tout le reste."],
+ ['20 − 2 × 5 = 90','Faux',"On multiplie d'abord : 20 − 10 = 10. Le 90 vient d'un calcul de gauche à droite (18 × 5)."],
+ ['Le trait de fraction joue le rôle de parenthèses.','Vrai',"On calcule le numérateur et le dénominateur séparément, puis on divise."],
+ ['36 : 6 : 2 = 12','Faux',"De gauche à droite : 36 : 6 = 6, puis 6 : 2 = 3."],
+ ['18 − 6 − 2 = 14','Faux',"De gauche à droite : 18 − 6 = 12, puis 12 − 2 = 10. Le 14 vient de 18 − (6 − 2)."],
+ ['3 + 5 × 2 = 16','Faux',"On multiplie d'abord : 3 + 10 = 13."],
+ ['(3 + 5) × 2 = 16','Vrai',"Parenthèses d'abord : 8 × 2 = 16."]];
+const M1PH=[
+ ()=>{const a=R(2,15),b=R(2,9),c=R(2,9);return[`la somme de ${a} et du produit de ${b} par ${c}`,`${a} + ${b} × ${c}`,a+b*c,`${a} + ${b*c} = ${a+b*c}`]},
+ ()=>{const a=R(2,9),b=R(2,9),c=R(2,9);return[`le produit de ${a} par la somme de ${b} et de ${c}`,`${a} × (${b} + ${c})`,a*(b+c),`${a} × ${b+c} = ${a*(b+c)}`]},
+ ()=>{const c=R(2,9),q=R(2,9),b=c*q,a=q+R(2,30);return[`la différence entre ${a} et le quotient de ${b} par ${c}`,`${a} − ${b} : ${c}`,a-q,`${a} − ${q} = ${a-q}`]},
+ ()=>{const c=R(2,9),q=R(2,9),s=c*q,a=R(1,s-1),b=s-a;return[`le quotient de la somme de ${a} et de ${b} par ${c}`,`(${a} + ${b}) : ${c}`,q,`${s} : ${c} = ${q}`]},
+ ()=>{const a=R(2,9),b=R(2,9),d=R(1,6),c=d+R(1,6);return[`le produit de la somme de ${a} et de ${b} par la différence entre ${c} et ${d}`,`(${a} + ${b}) × (${c} − ${d})`,(a+b)*(c-d),`${a+b} × ${c-d} = ${(a+b)*(c-d)}`]}];
+const M1={
+ mulAdd(){const a=R(2,20),b=R(2,9),c=R(2,9),t=R(0,2);
+  if(t===2){const A=b*c+R(1,25);return{q:`Calcule ${E5(`${A} − ${b} × ${c}`)}`,t:'num',a:String(A-b*c),traps:[{a:String((A-b)*c),msg:"Tu as calculé de gauche à droite : la multiplication passe avant la soustraction.",tag:'Multiplication prioritaire'}],sol:`On multiplie d'abord : ${A} − ${b} × ${c} = ${A} − ${b*c} = ${A-b*c}.`,skill:'Multiplication prioritaire'}}
+  const e=t?`${b} × ${c} + ${a}`:`${a} + ${b} × ${c}`;
+  return{q:`Calcule ${E5(e)}`,t:'num',a:String(a+b*c),traps:t?[]:[{a:String((a+b)*c),msg:"Tu as calculé de gauche à droite : la multiplication passe avant l'addition.",tag:'Multiplication prioritaire'}],sol:`On multiplie d'abord : ${b} × ${c} = ${b*c}, puis ${b*c} + ${a} = ${a+b*c}.`,skill:'Multiplication prioritaire'}},
+ divAdd(){const c=R(2,9),q=R(2,9),b=c*q,neg=Math.random()<.5,a=neg?q+R(1,30):R(2,30);const r=neg?a-q:a+q;const wrong=neg?(a-b)/c:(a+b)/c;
+  return{q:`Calcule ${E5(`${a} ${neg?'−':'+'} ${b} : ${c}`)}`,t:'num',a:String(r),traps:[{a:String(wrong),msg:"La division passe avant l'addition et la soustraction.",tag:'Division prioritaire'}],sol:`On divise d'abord : ${b} : ${c} = ${q}, puis ${a} ${neg?'−':'+'} ${q} = ${r}.`,skill:'Division prioritaire'}},
+ twoProd(){const a=R(2,9),b=R(2,9),c=R(2,9),d=R(2,9),P1=a*b,P2=c*d;const neg=Math.random()<.4&&P1>P2;const r=neg?P1-P2:P1+P2;
+  return{q:`Calcule ${E5(`${a} × ${b} ${neg?'−':'+'} ${c} × ${d}`)}`,t:'num',a:String(r),traps:[{a:String(neg?(P1-c)*d:(P1+c)*d),msg:"Les deux multiplications se font avant l'opération du milieu.",tag:'Multiplication prioritaire'}],sol:`On calcule les deux produits : ${P1} ${neg?'−':'+'} ${P2} = ${r}.`,skill:'Multiplication prioritaire'}},
+ par(){const t=R(0,2),a=R(2,12),b=R(2,9),c=R(2,9);
+  if(t===0)return{q:`Calcule ${E5(`(${a} + ${b}) × ${c}`)}`,t:'num',a:String((a+b)*c),traps:[{a:String(a+b*c),msg:"Tu as oublié les parenthèses : elles se calculent en premier.",tag:'Parenthèses'}],sol:`Parenthèses d'abord : ${a} + ${b} = ${a+b}, puis ${a+b} × ${c} = ${(a+b)*c}.`,skill:'Parenthèses'};
+  if(t===1){const B=c+R(1,9);return{q:`Calcule ${E5(`${b} × (${B} − ${c})`)}`,t:'num',a:String(b*(B-c)),traps:[{a:String(b*B-c),msg:"Tu as oublié les parenthèses : elles se calculent en premier.",tag:'Parenthèses'}],sol:`Parenthèses d'abord : ${B} − ${c} = ${B-c}, puis ${b} × ${B-c} = ${b*(B-c)}.`,skill:'Parenthèses'}}
+  const q=R(2,9),s=c*q,A=s+R(1,9),B=A-s;return{q:`Calcule ${E5(`(${A} − ${B}) : ${c}`)}`,t:'num',a:String(q),traps:B%c===0?[{a:String(A-B/c),msg:"Tu as oublié les parenthèses : elles se calculent en premier.",tag:'Parenthèses'}]:[],sol:`Parenthèses d'abord : ${A} − ${B} = ${s}, puis ${s} : ${c} = ${q}.`,skill:'Parenthèses'}},
+ leftRight(){const t=R(0,2);
+  if(t===0){const a=R(15,40),b=R(2,a-8),c=R(2,9);return{q:`Calcule ${E5(`${a} − ${b} + ${c}`)}`,t:'num',a:String(a-b+c),traps:[{a:String(a-(b+c)),msg:"Sans parenthèses, + et − se font de gauche à droite : on commence par la soustraction.",tag:'De gauche à droite'}],sol:`De gauche à droite : ${a} − ${b} = ${a-b}, puis ${a-b} + ${c} = ${a-b+c}.`,skill:'De gauche à droite'}}
+  if(t===1){const a=R(20,50),b=R(3,9),c=R(2,b-1);return{q:`Calcule ${E5(`${a} − ${b} − ${c}`)}`,t:'num',a:String(a-b-c),traps:[{a:String(a-(b-c)),msg:"De gauche à droite : on retire d'abord le premier nombre, puis le second.",tag:'De gauche à droite'}],sol:`De gauche à droite : ${a} − ${b} = ${a-b}, puis ${a-b} − ${c} = ${a-b-c}.`,skill:'De gauche à droite'}}
+  const b=R(2,6),c=R(2,5),q=R(2,9),a=b*q;return{q:`Calcule ${E5(`${a} : ${b} × ${c}`)}`,t:'num',a:String(q*c),traps:[{a:String(a/(b*c)),msg:"× et : ont la même priorité : on calcule de gauche à droite, donc la division d'abord.",tag:'De gauche à droite'}],sol:`De gauche à droite : ${a} : ${b} = ${q}, puis ${q} × ${c} = ${q*c}.`,skill:'De gauche à droite'}},
+ nested(){const t=R(0,2);
+  if(t===0){const a=R(2,6),b=R(1,9),d=R(1,6),c=d+R(1,6),r=a*(b+c-d);return{q:`Calcule ${E5(`${a} × [${b} + (${c} − ${d})]`)}`,t:'num',a:String(r),traps:[{a:String(a*b+c-d),msg:"Les crochets sont des parenthèses : tout ce qu'ils contiennent est multiplié par "+a+".",tag:'Parenthèses imbriquées'}],sol:`On commence par l'intérieur : ${c} − ${d} = ${c-d}, puis ${b} + ${c-d} = ${b+c-d}, enfin ${a} × ${b+c-d} = ${r}.`,skill:'Parenthèses imbriquées'}}
+  if(t===1){const c=R(2,8),d=R(2,6),b=c+d+R(1,9),a=b-c-d+R(2,20),r=a-(b-(c+d));return{q:`Calcule ${E5(`${a} − [${b} − (${c} + ${d})]`)}`,t:'num',a:String(r),traps:[{a:String(a-b-(c+d)),msg:"Attention à l'ordre : d'abord (… + …), puis le crochet, puis la soustraction devant.",tag:'Parenthèses imbriquées'}],sol:`Intérieur : ${c} + ${d} = ${c+d} ; crochet : ${b} − ${c+d} = ${b-c-d} ; enfin ${a} − ${b-c-d} = ${r}.`,skill:'Parenthèses imbriquées'}}
+  const a=R(2,9),b=R(2,9),c=R(1,b-1>1?b-1:1),d=R(2,5),r=(a+(b-c))*d;return{q:`Calcule ${E5(`[${a} + (${b} − ${c})] × ${d}`)}`,t:'num',a:String(r),traps:[{a:String(a+(b-c)*d),msg:"Tout le crochet est multiplié par "+d+", pas seulement la parenthèse.",tag:'Parenthèses imbriquées'}],sol:`Intérieur : ${b} − ${c} = ${b-c} ; crochet : ${a} + ${b-c} = ${a+b-c} ; enfin ${a+b-c} × ${d} = ${r}.`,skill:'Parenthèses imbriquées'}},
+ fracBar(){const d=R(1,5),c=d+R(2,6),den=c-d,q=R(2,9),num=den*q,a=R(1,num-1),b=num-a;
+  return{q:`Calcule ${F(`${a} + ${b}`,`${c} − ${d}`)}`,t:'num',a:String(q),traps:[{a:String(a+b/c-d),msg:"Le trait de fraction regroupe tout le haut et tout le bas, comme des parenthèses.",tag:'Trait de fraction'}].filter(t=>+t.a!==q),sol:`Numérateur : ${a} + ${b} = ${num}. Dénominateur : ${c} − ${d} = ${den}. Puis ${num} : ${den} = ${q}.`,skill:'Trait de fraction'}},
+ dec(){const t=R(0,2);let e,r,s;
+  if(t===0){const a=R(1,9)+.5,b=R(1,5)+.5,c=R(2,6);e=`${dec5(a)} + ${dec5(b)} × ${c}`;r=a+b*c;s=`${dec5(b)} × ${c} = ${dec5(b*c)}, puis ${dec5(a)} + ${dec5(b*c)} = ${dec5(r)}.`}
+  else if(t===1){const b=R(1,9)/10,c=pick([2,4,5,10]),a=R(5,15);e=`${a} − ${dec5(b)} × ${c}`;r=a-b*c;s=`${dec5(b)} × ${c} = ${dec5(b*c)}, puis ${a} − ${dec5(b*c)} = ${dec5(r)}.`}
+  else{const a=R(1,4)+R(1,9)/10,b=Math.round((R(2,6)-a%1)*10)/10,s1=a+b,c=pick([2,2.5,1.5,4]);e=`(${dec5(a)} + ${dec5(b)}) × ${dec5(c)}`;r=s1*c;s=`${dec5(a)} + ${dec5(b)} = ${dec5(s1)}, puis ${dec5(s1)} × ${dec5(c)} = ${dec5(r)}.`}
+  return{q:`Calcule ${E5(e)}`,t:'num',a:dec5(r),hint:'Utilise la virgule si besoin, ex. : 8,5',sol:s,skill:'Calculs avec des décimaux'}},
+ phrase(){const[txt,ex,r,s]=pick(M1PH)();return{q:`Calcule ${txt}.`,t:'num',a:String(r),sol:`On traduit : ${ex}.<br>${s}`,skill:'Traduire une phrase'}},
+ where(){const a=R(2,9),b=R(2,9),c=R(2,9);const O=[[`${a} + ${b} × ${c}`,a+b*c],[`(${a} + ${b}) × ${c}`,(a+b)*c],[`${a} × ${b} + ${c}`,a*b+c],[`${a} × (${b} + ${c})`,a*(b+c)]];
+  const vals=O.map(o=>o[1]);if(new Set(vals).size<4)return M1.where();const[right,v]=pick(O);
+  return{q:`Quelle expression vaut ${E5(v)} ?`,t:'choice',a:[right],keys:shuffle(O.map(o=>o[0])),long:true,show:esc(right),sol:O.map(o=>`${o[0]} = ${o[1]}`).join('<br>'),skill:'Parenthèses'}},
+ vf(){const[s,a,e]=pick(M1VF);return{q:`Vrai ou faux ? ${E5(s)}`,t:'choice',a:[a],keys:VF,sol:e,skill:'Règles de priorité'}},
+ long(){const b=R(2,6),d=R(1,5),c=d+R(1,5),f=R(2,6),q=R(1,8),e=f*q,a=R(q+1,30),r=a+b*(c-d)-q;
+  return{q:`Calcule ${E5(`${a} + ${b} × (${c} − ${d}) − ${e} : ${f}`)}`,t:'num',a:String(r),sol:`Parenthèses : ${c} − ${d} = ${c-d}.<br>Produit et quotient : ${b} × ${c-d} = ${b*(c-d)} et ${e} : ${f} = ${q}.<br>De gauche à droite : ${a} + ${b*(c-d)} − ${q} = ${r}.`,skill:'Enchaîner les priorités'}},
+ long2(){const a=R(2,6),b=R(2,9),c=R(2,9),e=R(2,7),P=a*(b+c);let q=Math.floor((P-1)/e);q=R(Math.max(1,q-4),q);const d=P-e*q;
+  return{q:`Calcule ${E5(`[${a} × (${b} + ${c}) − ${d}] : ${e}`)}`,t:'num',a:String(q),sol:`${b} + ${c} = ${b+c} ; ${a} × ${b+c} = ${P} ; ${P} − ${d} = ${P-d} ; ${P-d} : ${e} = ${q}.`,skill:'Enchaîner les priorités'}},
+ long3(){const f=R(2,5),q2=R(1,6),e=f*q2,d=R(1,6),den=d+q2,q=R(2,8),num=den*q,b=R(2,9);let a=Math.ceil((num+1)/b);a+=R(0,3);const c=a*b-num;
+  return{q:`Calcule ${F(`${a} × ${b} − ${c}`,`${d} + ${e} : ${f}`)}`,t:'num',a:String(q),sol:`Numérateur : ${a} × ${b} − ${c} = ${a*b} − ${c} = ${num}.<br>Dénominateur : ${d} + ${e} : ${f} = ${d} + ${q2} = ${den}.<br>${num} : ${den} = ${q}.`,skill:'Trait de fraction'}},
+ longDec(){const a=pick([1.5,2.5,0.5,1.25]),b=pick([4,6,8]),c=R(1,9)/10,d=Math.round((pick([1,2])-c)*10)/10,s=c+d,k=R(2,3);const r=a*b-s*k;
+  return{q:`Calcule ${E5(`${dec5(a)} × ${b} − (${dec5(c)} + ${dec5(d)}) × ${k}`)}`,t:'num',a:dec5(r),hint:'Utilise la virgule si besoin',sol:`Parenthèses : ${dec5(c)} + ${dec5(d)} = ${dec5(s)}.<br>Produits : ${dec5(a)} × ${b} = ${dec5(a*b)} et ${dec5(s)} × ${k} = ${dec5(s*k)}.<br>${dec5(a*b)} − ${dec5(s*k)} = ${dec5(r)}.`,skill:'Calculs avec des décimaux'}}
+};
+
+/* ---------- Monde 5e-2 : multiples et diviseurs ---------- */
+const M2VF=[
+ ['Si un nombre est divisible par 9, il est divisible par 3.','Vrai',"9 = 3 × 3 : un multiple de 9 est aussi un multiple de 3."],
+ ['Si un nombre est divisible par 3, il est divisible par 9.','Faux',"Contre-exemple : 12 est divisible par 3 mais pas par 9."],
+ ['0 est un multiple de tous les nombres entiers.','Vrai',"0 = n × 0 pour tout entier n."],
+ ['1 est un diviseur de tous les nombres entiers.','Vrai',"n = 1 × n pour tout entier n."],
+ ['Un nombre qui se termine par 3 est divisible par 3.','Faux',"Contre-exemple : 13. Pour 3, on regarde la somme des chiffres, pas le dernier."],
+ ['Un nombre divisible par 2 et par 5 est divisible par 10.','Vrai',"Il se termine par un chiffre pair et par 0 ou 5 : donc par 0."],
+ ['Un nombre divisible par 2 et par 4 est divisible par 8.','Faux',"Contre-exemple : 12 est divisible par 2 et par 4, mais pas par 8."],
+ ['Un nombre est toujours un multiple de lui-même.','Vrai',"n = n × 1."],
+ ['Un nombre qui se termine par 0 est divisible par 2, par 5 et par 10.','Vrai',"Dernier chiffre 0 : il est pair, se termine par 0 ou 5, et par 0."],
+ ['Un nombre pair est divisible par 4.','Faux',"Contre-exemple : 6 est pair mais pas divisible par 4."],
+ ['La somme des chiffres de 2 457 est 18, donc 2 457 est divisible par 9.','Vrai',"2 + 4 + 5 + 7 = 18, multiple de 9."]];
+const numSp=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+const critSol=(n,d)=>{const s=String(n).split('').reduce((x,y)=>x+ +y,0),u=n%10;
+  return{2:`Le chiffre des unités de ${numSp(n)} est ${u}, ${u%2?'impair':'pair'}.`,5:`Le chiffre des unités est ${u} ; il faudrait 0 ou 5.`,10:`Le chiffre des unités est ${u} ; il faudrait 0.`,
+   3:`Somme des chiffres : ${String(n).split('').join(' + ')} = ${s}, ${s%3?"qui n'est pas":'qui est'} un multiple de 3.`,9:`Somme des chiffres : ${String(n).split('').join(' + ')} = ${s}, ${s%9?"qui n'est pas":'qui est'} un multiple de 9.`}[d]};
+const divisorsOf=n=>{const r=[];for(let d=1;d<=n;d++)if(n%d===0)r.push(d);return r};
+const M2={
+ voc(){const a=R(3,12),b=R(3,12),n=a*b,t=R(0,2);
+  if(t===0)return{q:`${E5(`${a} × ${b} = ${n}`)}<br>Complète : ${n} est un … de ${a}.`,t:'choice',a:['multiple'],keys:['multiple','diviseur'],sol:`${n} est dans la table de ${a} : c'est un <b>multiple</b> de ${a}. Et ${a} est un diviseur de ${n}.`,skill:'Vocabulaire'};
+  if(t===1)return{q:`${E5(`${a} × ${b} = ${n}`)}<br>Complète : ${a} est un … de ${n}.`,t:'choice',a:['diviseur'],keys:['multiple','diviseur'],sol:`${n} : ${a} = ${b} tombe juste : ${a} est un <b>diviseur</b> de ${n}.`,skill:'Vocabulaire'};
+  return{q:`${E5(`${a} × ${b} = ${n}`)}<br>Complète : ${n} est … par ${b}.`,t:'choice',a:['divisible'],keys:['divisible','multiple'],sol:`On dit « ${n} est <b>divisible</b> par ${b} » ou « ${n} est un multiple de ${b} ».`,skill:'Vocabulaire'}},
+ isMult(){const b=R(3,13),k=R(4,15),a=b*k+pick([0,0,1,2,b-1]),y=a%b===0,div=Math.random()<.5;
+  return{q:div?`${E5(b)} est-il un diviseur de ${E5(a)} ?`:`${E5(a)} est-il un multiple de ${E5(b)} ?`,t:'choice',a:[y?'Oui':'Non'],keys:ON,sol:y?`${a} = ${b} × ${a/b} : la division tombe juste.`:`${a} = ${b} × ${Math.floor(a/b)} + ${a%b} : le reste n'est pas nul.`,skill:'Multiples et diviseurs'}},
+ crit(k){const d=pick([2,5,10,3,9,3,9]);let n;
+  if(Math.random()<.5){n=d*R(k==='easy'?12:40,k==='easy'?111:1100);if(d===10&&Math.random()<.3)n+=5}else n=R(k==='easy'?100:1000,k==='easy'?999:9999);
+  const y=n%d===0;return{q:`${E5(numSp(n))} est-il divisible par ${E5(d)} ?`,t:'choice',a:[y?'Oui':'Non'],keys:ON,sol:critSol(n,d),skill:d===3||d===9?'Divisibilité par 3 et 9':'Divisibilité par 2, 5 et 10'}},
+ euclid(){const b=R(3,15),q=R(5,40),r=R(1,b-1),a=b*q+r,askQ=Math.random()<.5;
+  return{q:`Dans la division euclidienne de ${E5(a)} par ${E5(b)}, quel est le ${askQ?'quotient':'reste'} ?`,t:'num',a:String(askQ?q:r),traps:q===r?[]:[{a:String(askQ?r:q),msg:`Tu as donné le ${askQ?'reste':'quotient'}.`,tag:'Division euclidienne'}],sol:`${a} = ${b} × ${q} + ${r}, avec ${r} < ${b}. Quotient ${q}, reste ${r}.`,skill:'Division euclidienne'}},
+ multList(){const b=R(4,13),k=R(3,9),lo=b*k-R(1,b-1),hi=lo+b*R(3,4)-R(1,b-1);const L=[];for(let v=lo;v<=hi;v++)if(v%b===0)L.push(v);
+  return{q:`Donne tous les multiples de ${E5(b)} compris entre ${E5(lo)} et ${E5(hi)}.`,t:'list',a:L.join(';'),sol:`On parcourt la table de ${b} : ${L.join(' ; ')}.`,skill:'Multiples et diviseurs'}},
+ divList(k){const n=pick(k==='boss'?[48,60,72,84,90,96,100]:[12,18,20,24,28,30,32,36,40,45]),L=divisorsOf(n),mid=L.slice(1,-1);
+  const pairs=[];for(let i=0;i<Math.ceil(L.length/2);i++)pairs.push(`${L[i]} × ${L[L.length-1-i]}`);
+  return{q:`Donne tous les diviseurs de ${E5(n)}.`,t:'list',a:L.join(';'),traps:[{a:mid.join(';'),msg:`N'oublie pas 1 et ${n} : ils sont toujours diviseurs de ${n}.`,tag:'Liste des diviseurs'}],sol:`On cherche les produits égaux à ${n} : ${pairs.join(', ')}.<br>Diviseurs : ${L.join(' ; ')}.`,skill:'Liste des diviseurs'}},
+ smallMult(){const b=R(6,19),N=R(80,400);const r=Math.floor(N/b)*b+b;
+  return{q:`Quel est le plus petit multiple de ${E5(b)} strictement supérieur à ${E5(N)} ?`,t:'num',a:String(r),traps:[{a:String(r-b),msg:`${r-b} est un multiple de ${b}, mais il n'est pas supérieur à ${N}.`,tag:'Multiples et diviseurs'}],sol:`${N} = ${b} × ${Math.floor(N/b)} + ${N%b}. Le multiple suivant est ${b} × ${Math.floor(N/b)+1} = ${r}.`,skill:'Multiples et diviseurs'}},
+ digit(){const d=pick([3,9,3,9,'2-3']);let a,b,s,L;
+  if(d==='2-3'){a=R(1,9);b=R(0,9);s=a+b;L=[0,2,4,6,8].filter(x=>(s+x)%3===0);
+   return{q:`On remplace ★ par un chiffre dans ${E5(`${a}${b}★`)}. Quels chiffres rendent ce nombre divisible par 2 <b>et</b> par 3 ? Donne-les tous.`,t:'list',a:L.join(';'),sol:`Divisible par 2 : ★ est pair (0, 2, 4, 6 ou 8).<br>Divisible par 3 : ${a} + ${b} + ★ = ${s} + ★ doit être un multiple de 3.<br>Les deux à la fois : ${L.join(' ; ')}.`,skill:'Divisibilité par 3 et 9'}}
+  a=R(1,9);b=R(0,9);s=a+b;L=[];for(let x=0;x<=9;x++)if((s+x)%d===0)L.push(x);
+  return{q:`On remplace ★ par un chiffre dans ${E5(`${a}★${b}`)}. Quels chiffres rendent ce nombre divisible par ${d} ? Donne-les tous.`,t:'list',a:L.join(';'),sol:`${a} + ★ + ${b} = ${s} + ★ doit être un multiple de ${d}.<br>Chiffres possibles : ${L.join(' ; ')}${L.length>1?' (de 0 à 9, on les prend tous)':''}.`,skill:'Divisibilité par 3 et 9'}},
+ prob(){const t=R(0,2);
+  if(t<2){const b=pick([6,6,10,12,8]),k=R(12,40),r=R(1,b-1),n=b*k+r,need=t===1;const obj={6:['œufs','boîtes de 6'],10:['crayons','paquets de 10'],12:['œufs','plateaux de 12'],8:['gâteaux','boîtes de 8']}[b];
+   return{q:need?`On a ${E5(n)} ${obj[0]} à ranger dans des ${obj[1]}. Combien de ${obj[1].split(' ')[0]} faut-il pour <b>tout</b> ranger ?`:`On a ${E5(n)} ${obj[0]} à ranger dans des ${obj[1]}. Combien de ${obj[1].split(' ')[0]} seront <b>pleins</b> ?`,
+    t:'num',a:String(need?k+1:k),traps:[{a:String(need?k:k+1),msg:need?`Il reste ${r} ${obj[0]} : il faut un contenant de plus.`:`Le dernier n'est pas plein : il ne contient que ${r} ${obj[0]}.`,tag:'Problèmes'}],sol:`${n} = ${b} × ${k} + ${r}. ${need?`${k} pleins, plus un pour les ${r} restants : ${k+1}.`:`${k} sont pleins, et il reste ${r} ${obj[0]}.`}`,skill:'Problèmes'}}
+  const n=pick([12,18,20,24,28,30,32,36]),L=divisorsOf(n).filter(d=>d>1&&d<n);
+  return{q:`Une classe de ${E5(n)} élèves doit former des groupes ayant tous le même nombre d'élèves (au moins 2 élèves par groupe, et au moins 2 groupes). Combien de tailles de groupe sont possibles ?`,t:'num',a:String(L.length),traps:[{a:String(L.length+2),msg:"Les groupes de 1 élève et le groupe unique de toute la classe sont exclus.",tag:'Problèmes'}],sol:`La taille doit diviser ${n} : diviseurs de ${n} sans 1 ni ${n} : ${L.join(' ; ')}. Il y a ${L.length} possibilités.`,skill:'Problèmes'}},
+ mystery(){const[a,b]=pick([[4,9],[5,9],[2,9],[3,5],[4,5],[5,6],[3,4],[2,7],[3,7]]),l=lcm(a,b),M=l*R(3,12),lo=M-R(0,l-1),hi=lo+l-1;
+  return{q:`Je suis un nombre compris entre ${E5(lo)} et ${E5(hi)}. Je suis divisible par ${E5(a)} et par ${E5(b)}. Qui suis-je ?`,t:'num',a:String(M),sol:`Les nombres divisibles par ${a} et par ${b} sont les multiples de ${l}. Entre ${lo} et ${hi}, le seul est ${M} = ${l} × ${M/l}.`,skill:'Problèmes'}},
+ vf(){const[s,a,e]=pick(M2VF);return{q:`Vrai ou faux ? ${s}`,t:'choice',a:[a],keys:VF,sol:e,skill:'Raisonner'}}
+};
+
+/* ---------- Monde 5e-3 : symétrie centrale ---------- */
+const reg=(n,r,a0)=>Array.from({length:n},(_,i)=>{const a=(a0+360*i/n)*Math.PI/180;return[80+r*Math.cos(a),62+r*Math.sin(a)]});
+const SHAPES=[
+ ['un carré',true,[[42,24],[118,24],[118,100],[42,100]],"Un demi-tour autour du point d'intersection des diagonales le ramène sur lui-même."],
+ ['un rectangle',true,[[22,34],[138,34],[138,90],[22,90]],"Son centre est le point d'intersection des diagonales."],
+ ['un losange',true,[[80,10],[128,62],[80,114],[32,62]],"Son centre est le point d'intersection des diagonales."],
+ ['un parallélogramme',true,[[50,30],[148,30],[110,94],[12,94]],"Tout parallélogramme a un centre de symétrie : l'intersection de ses diagonales. (Il n'a pourtant pas d'axe de symétrie !)"],
+ ['un hexagone régulier',true,reg(6,52,0),"Ses sommets sont deux à deux opposés : un demi-tour autour du centre le ramène sur lui-même."],
+ ['un cercle',true,null,"Le centre du cercle est un centre de symétrie."],
+ ['un triangle équilatéral',false,reg(3,56,-90),"Après un demi-tour, la pointe du haut se retrouve en bas : la figure ne se superpose pas. (Il a 3 axes de symétrie, mais pas de centre.)"],
+ ['un pentagone régulier',false,reg(5,54,-90),"Un nombre impair de sommets : après un demi-tour, un sommet tombe face à un côté."],
+ ['un trapèze isocèle',false,[[50,32],[110,32],[142,94],[18,94]],"Après un demi-tour, la grande base passerait en haut : pas de centre de symétrie (mais un axe)."],
+ ['un triangle rectangle',false,[[32,104],[132,104],[32,22]],"Aucun triangle n'a de centre de symétrie."],
+ ['un cerf-volant',false,[[80,10],[120,44],[80,114],[40,44]],"Il a un axe de symétrie mais pas de centre."]];
+const shapeSvg=p=>`<svg viewBox="0 0 160 124" class="fig fig-s" role="img" aria-label="Figure géométrique">${p?`<polygon points="${p.map(([x,y])=>x.toFixed(1)+','+y.toFixed(1)).join(' ')}" class="gp" style="fill:${COL.f};stroke:${COL.f}"/>`:`<circle cx="80" cy="62" r="52" class="gp" style="fill:${COL.f};stroke:${COL.f}"/>`}</svg>`;
+const LET_Y='HINOSXZ',LET_N='ABCDEFKLMPRTUVWY';
+const M3VF=[
+ ["Si A' est le symétrique de A par rapport à O, alors O est le milieu de [AA'].",'Vrai',"C'est la définition de la symétrie centrale."],
+ ['Le symétrique du point O par rapport à O est le point O lui-même.','Vrai',"O est le seul point qui ne bouge pas."],
+ ["A, O et A' sont toujours alignés.",'Vrai',"O est le milieu de [AA'], donc il est sur la droite (AA')."],
+ ["Si A' est le symétrique de A par rapport à O, alors OA' = 2 × OA.",'Faux',"O est le milieu : OA' = OA. C'est AA' qui vaut 2 × OA."],
+ ['La symétrie centrale correspond à un demi-tour autour du point O.','Vrai',"On fait tourner la figure de 180° autour de O."],
+ ['Deux figures symétriques par rapport à un point se superposent par pliage.','Faux',"Le pliage, c'est la symétrie axiale. Ici, elles se superposent par un demi-tour."],
+ ["Le symétrique d'un point par rapport à O est sur la même ligne horizontale que lui.",'Faux',"Il est sur la droite qui passe par le point et par O, quelle que soit sa direction."],
+ ['Une figure et sa symétrique par rapport à un point ont la même forme et les mêmes dimensions.','Vrai',"Un demi-tour ne déforme pas la figure."]];
+const FIGT=[[[0,0],[0,4],[3,3],[1,2],[1,0]],[[0,0],[3,0],[3,1],[1,1],[1,4],[0,4]],[[0,0],[4,0],[2,2],[2,3],[0,3]],[[0,0],[2,0],[3,2],[1,3],[0,2]]];
+function placeFig(W,H,O){for(let n=0;n<600;n++){const T=pick(FIGT),ox=R(0,W),oy=R(0,H);
+   const P=T.map(([x,y])=>[x+ox,y+oy]);const C=P.map(p=>sym(p,O)),V=P.map(p=>[2*O[0]-p[0],p[1]]),Hh=P.map(p=>[p[0],2*O[1]-p[1]]),v=[2*(O[0]-P[0][0]),2*(O[1]-P[0][1])],Tr=P.map(p=>[p[0]+v[0],p[1]+v[1]]);
+   const all=[P,C,V,Hh,Tr].flat();if(!all.every(p=>inG(p,W,H)))continue;
+   if(P.some(p=>p[0]===O[0]&&p[1]===O[1]))continue;
+   const minX=Math.min(...P.map(p=>p[0])),maxX=Math.max(...P.map(p=>p[0])),minY=Math.min(...P.map(p=>p[1])),maxY=Math.max(...P.map(p=>p[1]));
+   if(!((maxX<O[0]||minX>O[0])&&(maxY<O[1]||minY>O[1])))continue;
+   const box=X=>[Math.min(...X.map(p=>p[0])),Math.max(...X.map(p=>p[0])),Math.min(...X.map(p=>p[1])),Math.max(...X.map(p=>p[1]))],bp=box(P);
+   if([C,V,Hh,Tr].some(Q=>{const q=box(Q);return bp[0]<=q[1]&&q[0]<=bp[1]&&bp[2]<=q[3]&&q[2]<=bp[3]}))continue;
+   return{P,C,V,H:Hh,Tr}}return null}
+const M3={
+ shape(){const[n,y,p,e]=pick(SHAPES);return{q:`Cette figure (${n}) a-t-elle un centre de symétrie ?${shapeSvg(p)}`,t:'choice',a:[y?'Oui':'Non'],keys:ON,sol:e,skill:'Centre de symétrie'}},
+ letter(){const y=Math.random()<.5,l=pick(y?LET_Y.split(''):LET_N.split(''));
+  return{q:`La lettre ci-dessous a-t-elle un centre de symétrie ?<span class="bigl">${l}</span>`,t:'choice',a:[y?'Oui':'Non'],keys:ON,sol:y?`Si on fait tourner ${l} d'un demi-tour, on retrouve exactement ${l} : elle a un centre de symétrie.`:`Après un demi-tour, ${l} est à l'envers : pas de centre de symétrie.${'ABCDEKMTUVWY'.includes(l)?' (Elle a un axe de symétrie, ce qui est différent.)':''}`,skill:'Centre de symétrie'}},
+ vf(){const[s,a,e]=pick(M3VF);return{q:`Vrai ou faux ? ${s}`,t:'choice',a:[a],keys:VF,sol:e,skill:'Définition'}},
+ pickImg(){const W=10,H=7;for(let n=0;n<300;n++){const O=[R(3,7),R(2,5)],A=[R(0,W),R(0,H)];if(A[0]===O[0]||A[1]===O[1])continue;
+   const T=sym(A,O),V=[T[0],A[1]],Hh=[A[0],T[1]],Mi=[(A[0]+O[0])/2,(A[1]+O[1])/2],D=[T[0]+pick([1,-1]),T[1]];
+   const cand=[[T,null],[V,["C'est le symétrique par pliage autour d'une droite verticale, pas un demi-tour autour de O.",'Symétrique ou pliage']],[Hh,["C'est le symétrique par pliage autour d'une droite horizontale, pas un demi-tour autour de O.",'Symétrique ou pliage']],[D,["Ce point n'est pas aligné avec A et O : compte bien les carreaux.",'Image d\'un point']]];
+   if(Number.isInteger(Mi[0])&&Number.isInteger(Mi[1]))cand.push([Mi,["Ce point est entre A et O. Le symétrique est de l'autre côté de O, à la même distance.",'Image d\'un point']]);
+   const ok=cand.filter(([p])=>inG(p,W,H)&&!(p[0]===A[0]&&p[1]===A[1])&&!(p[0]===O[0]&&p[1]===O[1]));
+   const uniq=[];ok.forEach(c=>{if(!uniq.some(u=>u[0][0]===c[0][0]&&u[0][1]===c[0][1]))uniq.push(c)});
+   if(uniq.length<4||uniq[0][1])continue;const use=[uniq[0]].concat(shuffle(uniq.slice(1)).slice(0,3)),labs=shuffle(['B','C','D','E']);
+   const tm={};let right;use.forEach((c,i)=>{if(!c[1])right=labs[i];else tm[labs[i]]=c[1]});
+   const pts=[{x:O[0],y:O[1],l:'O',c:COL.o},{x:A[0],y:A[1],l:'A'}].concat(use.map((c,i)=>({x:c[0][0],y:c[0][1],l:labs[i],c:COL.f})));
+   return{q:`Quel point est le symétrique de A par rapport à O ?${gridSvg({w:W,h:H,pts})}`,t:'choice',a:[right],keys:labs.slice().sort(),tm,
+    sol:`O doit être le milieu du segment qui relie A à son symétrique : de A à O, on se déplace de ${Math.abs(O[0]-A[0])} carreau${Math.abs(O[0]-A[0])>1?'x':''} ${O[0]>A[0]?'vers la droite':'vers la gauche'} et ${Math.abs(O[1]-A[1])} ${O[1]>A[1]?'vers le haut':'vers le bas'} ; on refait le même déplacement depuis O et on arrive en ${right}.${gridSvg({w:W,h:H,pts:[{x:O[0],y:O[1],l:'O',c:COL.o},{x:A[0],y:A[1],l:'A'},{x:T[0],y:T[1],l:right,c:COL.f}],segs:[[A[0],A[1],T[0],T[1]]]})}`,skill:"Image d'un point"}}
+  return M3.dist()},
+ dist(k){const half=Math.random()<.5;const v=k==='boss'?R(11,99)/10:R(2,9)+pick([0,0,.5,.2,.4]);
+  if(!half)return{q:`A' est le symétrique de A par rapport à O, et ${E5(`OA = ${dec5(v)} cm`)}. Combien mesure ${E5("AA'")} (en cm) ?`,t:'num',a:dec5(2*v),hint:'Utilise la virgule si besoin',traps:[{a:dec5(v),msg:"O est le milieu de [AA'] : AA' = OA + OA' = 2 × OA.",tag:'Définition'},{a:dec5(v/2),msg:"Tu as divisé par 2 : c'est AA' qui est le double de OA.",tag:'Définition'}],sol:`O est le milieu de [AA'], donc OA' = OA = ${dec5(v)} cm et AA' = 2 × ${dec5(v)} = ${dec5(2*v)} cm.`,skill:'Définition'};
+  const AA=k==='boss'?R(31,199)/10:2*v;
+  return{q:`A' est le symétrique de A par rapport à O, et ${E5(`AA' = ${dec5(AA)} cm`)}. Combien mesure ${E5("OA'")} (en cm) ?`,t:'num',a:dec5(AA/2),hint:'Utilise la virgule si besoin',traps:[{a:dec5(AA),msg:"O est le milieu de [AA'] : OA' est la moitié de AA'.",tag:'Définition'},{a:dec5(AA*2),msg:"OA' est la moitié de AA', pas le double.",tag:'Définition'}],sol:`O est le milieu de [AA'], donc OA' = ${dec5(AA)} : 2 = ${dec5(AA/2)} cm.`,skill:'Définition'}},
+ pairFig(){const W=12,H=8,O=[6,4];const f=placeFig(W,H,O);if(!f)return M3.shape();
+  const t=pick(['C','C','V','H','Tr']),G=f[t],ok=t==='C';
+  const msg={V:"La figure orange est retournée comme par un pliage le long d'une droite verticale : c'est une symétrie axiale, pas un demi-tour.",H:"La figure orange est retournée comme par un pliage le long d'une droite horizontale : c'est une symétrie axiale, pas un demi-tour.",Tr:"La figure orange a seulement glissé, sans tourner : après un demi-tour, elle serait la tête en bas."}[t];
+  const svg=o=>gridSvg({w:W,h:H,polys:[{p:f.P,c:COL.f},{p:o,c:COL.g}],pts:[{x:O[0],y:O[1],l:'O',c:COL.o}]});
+  return{q:`La figure orange est-elle la symétrique de la figure violette par rapport au point O ?${svg(G)}`,t:'choice',a:[ok?'Oui':'Non'],keys:ON,tm:ok?{}:{Oui:[msg,'Symétrique ou pliage']},
+   sol:ok?`Oui : chaque sommet et son image sont alignés avec O, à la même distance de part et d'autre. La figure a fait un demi-tour.`:`Non. ${msg}<br>La vraie symétrique ressemble à ceci :${svg(f.C)}`,skill:'Figures symétriques'}},
+ whichCentre(){const W=12,H=8;for(let n=0;n<60;n++){const O=[R(4,8),R(3,5)],f=placeFig(W,H,O);if(!f)continue;
+   const bb=Q=>{const xs=Q.map(q=>q[0]),ys=Q.map(q=>q[1]);return p=>p[0]>=Math.min(...xs)-1&&p[0]<=Math.max(...xs)+1&&p[1]>=Math.min(...ys)-1&&p[1]<=Math.max(...ys)+1},inP=bb(f.P),inC=bb(f.C);
+   const c=[[O,null]].concat(shuffle([[2,0],[-2,0],[0,2],[0,-2],[2,2],[-2,-2],[2,-2],[-2,2],[3,1],[-3,-1],[1,3],[-1,-3]]).map(([dx,dy])=>[[O[0]+dx,O[1]+dy],1])).filter(([p],i)=>inG(p,W,H)&&(i===0||(!inP(p)&&!inC(p))));
+   if(c.length<4||c[0][1])continue;const use=[c[0]].concat(shuffle(c.slice(1)).slice(0,3)),labs=shuffle(['K','L','M','N']);let right;use.forEach((u,i)=>{if(!u[1])right=labs[i]});
+   const P0=f.P[0],C0=f.C[0];
+   return{q:`La figure orange est la symétrique de la figure violette par rapport à l'un de ces points. Lequel ?${gridSvg({w:W,h:H,polys:[{p:f.P,c:COL.f},{p:f.C,c:COL.g}],pts:use.map((u,i)=>({x:u[0][0],y:u[0][1],l:labs[i],c:COL.o}))})}`,
+    t:'choice',a:[right],keys:labs.slice().sort(),sol:`On relie un sommet à son image (le même coin, tête en bas) : le centre est le <b>milieu</b> de ce segment. C'est ${right}.${gridSvg({w:W,h:H,polys:[{p:f.P,c:COL.f},{p:f.C,c:COL.g}],segs:[[P0[0],P0[1],C0[0],C0[1]]],pts:[{x:O[0],y:O[1],l:right,c:COL.o}]})}`,skill:'Figures symétriques'}}
+  return M3.pairFig()},
+ coord(k){const W=10,H=8;for(let n=0;n<200;n++){const O=[R(2,8),R(2,6)],A=[R(0,W),R(0,H)];if(A[0]===O[0]&&A[1]===O[1])continue;const T=sym(A,O);if(!inG(T,W,H)||A[0]===O[0]||A[1]===O[1])continue;
+   const show=k!=='boss';
+   return{q:`Sur le quadrillage repéré, ${E5(`A${ptS(A)}`)} et ${E5(`O${ptS(O)}`)}. Quelles sont les coordonnées de A', symétrique de A par rapport à O ?${show?gridSvg({w:W,h:H,num:true,pts:[{x:A[0],y:A[1],l:'A'},{x:O[0],y:O[1],l:'O',c:COL.o}]}):''}`,t:'pt',a:`(${T[0]};${T[1]})`,
+    traps:[{a:`(${T[0]};${A[1]})`,msg:"Seule l'abscisse a changé : c'est un pliage vertical. Il faut aussi « retourner » l'ordonnée.",tag:'Symétrique ou pliage'},{a:`(${A[0]};${T[1]})`,msg:"Seule l'ordonnée a changé : c'est un pliage horizontal. Il faut aussi « retourner » l'abscisse.",tag:'Symétrique ou pliage'},{a:`(${O[0]-A[0]};${O[1]-A[1]})`,msg:"Tu as donné le déplacement de A vers O ; il faut le refaire depuis O.",tag:"Image d'un point"}].filter(t=>!/-/.test(t.a)),
+    sol:`De A à O : ${O[0]-A[0]>0?'+':'−'}${Math.abs(O[0]-A[0])} en abscisse, ${O[1]-A[1]>0?'+':'−'}${Math.abs(O[1]-A[1])} en ordonnée. On refait le même déplacement depuis O : A'(${O[0]} ${O[0]-A[0]<0?'−':'+'} ${Math.abs(O[0]-A[0])} ; ${O[1]} ${O[1]-A[1]<0?'−':'+'} ${Math.abs(O[1]-A[1])}) = A'${ptS(T)}.${gridSvg({w:W,h:H,num:true,pts:[{x:A[0],y:A[1],l:'A'},{x:O[0],y:O[1],l:'O',c:COL.o},{x:T[0],y:T[1],l:"A'",c:COL.f}],segs:[[A[0],A[1],T[0],T[1]]]})}`,skill:'Quadrillage repéré'}}
+  return M3.dist(k)},
+ coordMid(){for(let n=0;n<200;n++){const O=[R(2,10),R(2,8)],A=[R(0,12),R(0,10)];const T=sym(A,O);if(!inG(T,12,10)||A[0]===O[0]||A[1]===O[1])continue;
+   return{q:`${E5(`A${ptS(A)}`)} et ${E5(`A'${ptS(T)}`)} sont symétriques par rapport à un point O. Quelles sont les coordonnées de O ?`,t:'pt',a:`(${O[0]};${O[1]})`,
+    traps:[{a:`(${T[0]-A[0]};${T[1]-A[1]})`,msg:"Tu as calculé le déplacement de A à A'. O est au milieu : il faut faire la moitié du chemin depuis A.",tag:"Image d'un point"}].filter(t=>!/-/.test(t.a)&&t.a!==`(${O[0]};${O[1]})`),
+    sol:`O est le milieu de [AA'] : on fait la moitié du chemin. En abscisse : de ${A[0]} à ${T[0]}, le milieu est ${O[0]}. En ordonnée : de ${A[1]} à ${T[1]}, le milieu est ${O[1]}. Donc O${ptS(O)}.`,skill:'Quadrillage repéré'}}
+  return M3.coord('boss')}
+};
+
+/* ---------- Les mondes de 5e ---------- */
+const M5_WORLDS=[
+ {id:'5-prio',name:'Priorités des opérations',chap:'Chapitre 1 · objectif 1',color:'var(--w1)',glyph:'×+',levels:[
+  {name:'La multiplication d’abord',kind:'easy',gens:[M1.mulAdd,M1.divAdd,M1.twoProd]},
+  {name:'Les parenthèses',kind:'easy',gens:[M1.par,M1.par,M1.mulAdd,M1.vf]},
+  {name:'De gauche à droite',kind:'hard',gens:[M1.leftRight,M1.dec,M1.where,M1.twoProd,M1.divAdd]},
+  {name:'Crochets et fractions',kind:'hard',gens:[M1.nested,M1.fracBar,M1.phrase,M1.leftRight]},
+  {name:'Le Maître des Priorités',kind:'boss',gens:[M1.long,M1.long2,M1.long3,M1.longDec,M1.nested,M1.fracBar,M1.phrase,M1.leftRight,M1.where,M1.long]}]},
+ {id:'5-mult',name:'Multiples et diviseurs',chap:'Chapitre 2 · objectif 1',color:'var(--w2)',glyph:'7|',levels:[
+  {name:'Multiple ou diviseur ?',kind:'easy',gens:[M2.voc,M2.isMult,M2.euclid]},
+  {name:'Critères de divisibilité',kind:'easy',gens:[M2.crit,M2.crit,M2.isMult]},
+  {name:'Les listes',kind:'hard',gens:[M2.multList,M2.divList,M2.smallMult,M2.crit]},
+  {name:'Raisonner',kind:'hard',gens:[M2.vf,M2.digit,M2.prob,M2.euclid]},
+  {name:'Le Kraken des Diviseurs',kind:'boss',gens:[M2.divList,M2.digit,M2.mystery,M2.prob,M2.vf,M2.crit,M2.multList,M2.divList,M2.digit,M2.prob]}]},
+ {id:'5-sym',name:'Symétrie centrale',chap:'Chapitre 8 · objectif 1',color:'var(--w3)',glyph:'⟲',levels:[
+  {name:'Le demi-tour',kind:'easy',gens:[M3.shape,M3.letter,M3.vf]},
+  {name:"L'image d'un point",kind:'easy',gens:[M3.pickImg,M3.dist,M3.pickImg]},
+  {name:'Figures symétriques',kind:'hard',gens:[M3.pairFig,M3.whichCentre,M3.pickImg,M3.dist]},
+  {name:'Le quadrillage repéré',kind:'hard',gens:[M3.coord,M3.coord,M3.pairFig,M3.shape]},
+  {name:'Le Démon du Demi-Tour',kind:'boss',gens:[M3.coordMid,M3.coord,M3.pairFig,M3.whichCentre,M3.dist,M3.shape,M3.pickImg,M3.coordMid,M3.pairFig,M3.vf]}]}];
+CURRICULA.maths['5e']=M5_WORLDS;
+
 const subjectsFor=n=>Object.keys(CURRICULA).filter(s=>CURRICULA[s][n]);
 const N_Q=10;
 function buildQuestions(spec){
@@ -988,7 +1238,7 @@ async function train(){
 const immediate=()=>G.kind==='easy'||G.kind==='train';
 function qTime(){return Math.min(600,(G.acc||0)+(document.hidden?0:(performance.now()-G.t0)/1000))}
 document.addEventListener('visibilitychange',()=>{if(!G||G.fb)return;if(document.hidden)G.acc=(G.acc||0)+(performance.now()-G.t0)/1000;else G.t0=performance.now()});
-function hintFor(q){return{expr:q.form==='fact'?'Forme factorisée attendue':q.form==='dev'?'Forme développée et réduite':'',frac:'Fraction irréductible, ex. 7/12',set:KS_SET,list:'Sépare par « ; »'}[q.t]||''}
+function hintFor(q){return{expr:q.form==='fact'?'Forme factorisée attendue':q.form==='dev'?'Forme développée et réduite':'',frac:'Fraction irréductible, ex. 7/12',set:KS_SET,list:'Sépare par « ; »',pt:'Coordonnées : (abscisse ; ordonnée), ex. (3 ; 5)'}[q.t]||''}
 function kb(){const rows=['7','8','9','(',')','BS','4','5','6','×','/','x','1','2','3','+','−','²','0',',',';','^','√','ℝ','[',']','{','}','∞','∪'];
   return `<div class="kb">${rows.map(k=>`<button class="key ${k==='BS'?'alt':''}" data-act="key" data-k="${k}" aria-label="${k==='BS'?'Effacer':k}">${k==='BS'?'⌫':k}</button>`).join('')}<button class="key alt" data-act="key" data-k="L" aria-label="Curseur à gauche">◀</button><button class="key alt" data-act="key" data-k="R" aria-label="Curseur à droite">▶</button><button class="key alt" data-act="key" data-k="∅">∅</button><button class="key go" data-act="submit">Valider</button></div>`}
 function drawInput(){const el=document.getElementById('ans');if(!el)return;
