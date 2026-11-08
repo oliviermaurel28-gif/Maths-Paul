@@ -128,6 +128,8 @@ sup{font-size:.68em;line-height:0}
 .kb{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;max-width:520px;margin:0 auto}
 .key{min-height:44px;border-radius:9px;background:var(--key);color:var(--key-fg);font-family:var(--f-math);font-size:19px;box-shadow:var(--shadow);user-select:none;-webkit-user-select:none}
 .key:active{transform:translateY(1px);filter:brightness(.92)}
+.key.kx{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:700;font-size:24px;color:var(--wc);border:1.5px solid var(--wc)}
+.key.kmul{font-size:24px}
 .key.alt{background:var(--key-alt);border:1.5px solid var(--line);font-size:17px}
 .key.go{grid-column:span 3;background:var(--wc);color:#fff;font-family:var(--f-body);font-weight:700;font-size:17px}
 .choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;max-width:520px;margin:0 auto}
@@ -372,6 +374,10 @@ function check(q,raw){
     return{ok:q.groups.every(g=>g.some(w=>n.includes(' '+w+' ')||n.includes(' '+w)))}}
   if(q.t==='ord'){const n=raw.toUpperCase().replace(/[^A-Z]/g,'');return{ok:n===q.a}}
   if(q.t==='dec')return checkDec(raw,q.n);
+  if(q.t==='expr'&&raw.includes('×')){const alt=raw.replace(/×/g,'x');let good=false;try{good=EQ.expr(alt,q.a)}catch(e){}
+    let bad=false;try{EQ.expr(raw,q.a)}catch(e){bad=true}
+    if(good&&!(()=>{try{return EQ.expr(raw,q.a)}catch(e){return false}})())return{invalid:"Tu as tapé × (le signe « fois ») au lieu de la lettre x. Corrige, puis valide."};
+    if(bad||/×\s*[+\-−)]|×\s*$/.test(raw))return{invalid:"Après le signe ×, il faut un nombre. Voulais-tu taper la lettre x ?"}}
   let ok;
   try{ok=EQ[q.t](raw,q.a)}catch(e){
     return{invalid:q.t==='set'?'Écriture non reconnue. Exemples : [2 ; 5[ , {−1 ; 4} , ∅. Sépare avec « ; ».':q.t==='list'?'Écriture non reconnue : sépare les nombres par « ; ».':q.t==='pt'?'Écris les coordonnées ainsi : (3 ; 5).':'Écriture non reconnue : vérifie les parenthèses et les signes.'}}
@@ -1240,7 +1246,7 @@ function qTime(){return Math.min(600,(G.acc||0)+(document.hidden?0:(performance.
 document.addEventListener('visibilitychange',()=>{if(!G||G.fb)return;if(document.hidden)G.acc=(G.acc||0)+(performance.now()-G.t0)/1000;else G.t0=performance.now()});
 function hintFor(q){return{expr:q.form==='fact'?'Forme factorisée attendue':q.form==='dev'?'Forme développée et réduite':'',frac:'Fraction irréductible, ex. 7/12',set:KS_SET,list:'Sépare par « ; »',pt:'Coordonnées : (abscisse ; ordonnée), ex. (3 ; 5)'}[q.t]||''}
 function kb(){const rows=['7','8','9','(',')','BS','4','5','6','×','/','x','1','2','3','+','−','²','0',',',';','^','√','ℝ','[',']','{','}','∞','∪'];
-  return `<div class="kb">${rows.map(k=>`<button class="key ${k==='BS'?'alt':''}" data-act="key" data-k="${k}" aria-label="${k==='BS'?'Effacer':k}">${k==='BS'?'⌫':k}</button>`).join('')}<button class="key alt" data-act="key" data-k="L" aria-label="Curseur à gauche">◀</button><button class="key alt" data-act="key" data-k="R" aria-label="Curseur à droite">▶</button><button class="key alt" data-act="key" data-k="∅">∅</button><button class="key go" data-act="submit">Valider</button></div>`}
+  return `<div class="kb">${rows.map(k=>`<button class="key ${k==='BS'?'alt':k==='x'?'kx':k==='×'?'kmul':''}" data-act="key" data-k="${k}" aria-label="${k==='BS'?'Effacer':k==='x'?'Lettre x':k==='×'?'Fois':k}">${k==='BS'?'⌫':k}</button>`).join('')}<button class="key alt" data-act="key" data-k="L" aria-label="Curseur à gauche">◀</button><button class="key alt" data-act="key" data-k="R" aria-label="Curseur à droite">▶</button><button class="key alt" data-act="key" data-k="∅">∅</button><button class="key go" data-act="submit">Valider</button></div>`}
 function drawInput(){const el=document.getElementById('ans');if(!el)return;
   el.innerHTML=G.s?`${rawHtml(G.s.slice(0,G.c))}<span class="caret"></span>${rawHtml(G.s.slice(G.c))}`:`<span class="caret"></span><span class="ph">Écris ta réponse avec le clavier</span>`}
 function play(){
