@@ -576,6 +576,126 @@ const WORLDS=[
 
 
 /* =====================================================================
+   SÉRIE SPÉCIALE RÉVISION INTERRO : NOVEMBRE 2026
+   Cible les points faibles repérés sur les copies de Paul (devoirs 2 et 3) :
+   encadrements avec soustraction / coefficient négatif, centre et rayon,
+   complémentaire en valeur absolue, image ≠ antécédent, ensemble de définition,
+   décimaux périodiques.
+   ===================================================================== */
+const tstr=v=>fmtD(v/10);            // dixièmes -> affichage « 1,4 »
+const nstr=v=>String(v/10);          // dixièmes -> réponse « 1.4 »
+const ovl=s=>`<span style="text-decoration:overline">${s}</span>`;
+
+/* ----- 1. Encadrements ----- */
+function termLine(c,v,a10,b10){
+  const lo=c>0?c*a10:c*b10,hi=c>0?c*b10:c*a10;const cs=c===1?'':c===-1?'−':String(Math.abs(c));const name=(c<0?'−':'')+(Math.abs(c)===1?'':Math.abs(c))+v;
+  if(c===1)return{lo,hi,line:`${tstr(a10)} ≤ ${v} ≤ ${tstr(b10)}`};
+  if(c>0)return{lo,hi,line:`× ${c} : ${tstr(lo)} ≤ ${name} ≤ ${tstr(hi)}`};
+  return{lo,hi,line:`× ${m(c)} (nombre <b>négatif</b>, l'ordre s'inverse) : ${tstr(lo)} ≤ ${name} ≤ ${tstr(hi)}`}}
+function mkEnc(cfg){return function(){
+  const cx=pick(cfg.cx),cy=cfg.cy?pick(cfg.cy):0,c0=cfg.c0?pick(cfg.c0):0;
+  const xa=cfg.xpos?R(5,30):R(-30,30),xb=xa+R(6,25),ya=cfg.ypos?R(5,30):R(-30,20),yb=ya+R(6,25);
+  const tx=termLine(cx,'x',xa,xb),ty=cy?termLine(cy,'y',ya,yb):{lo:0,hi:0,line:''};
+  const lo=c0*10+tx.lo+ty.lo,hi=c0*10+tx.hi+ty.hi;
+  let s=c0?String(c0):'';const add=(c,v)=>{const a=Math.abs(c);const b=(a===1?'':a)+v;s+=s===''?(c<0?'-':'')+b:(c<0?'-':'+')+b};add(cx,'x');if(cy)add(cy,'y');
+  const inter=Math.random()<.4;
+  const stX=inter?`<b class="m">x ∈ [${tstr(xa)} ; ${tstr(xb)}]</b>`:`<b class="m">${tstr(xa)} ≤ x ≤ ${tstr(xb)}</b>`,stY=inter?`<b class="m">y ∈ [${tstr(ya)} ; ${tstr(yb)}]</b>`:`<b class="m">${tstr(ya)} ≤ y ≤ ${tstr(yb)}</b>`;
+  const naiveLo=c0*10+cx*xa+cy*ya,naiveHi=c0*10+cx*xb+cy*yb;
+  const traps=(naiveLo!==lo||naiveHi!==hi)?[{a:`[${nstr(naiveLo)};${nstr(naiveHi)}]`,msg:"On ne peut pas soustraire ni multiplier par un négatif « borne à borne » : le plus petit devient le plus grand. Encadre d'abord le terme négatif.",tag:'Encadrement'}]:[];
+  const intro=(cx<0||cy<0)?"<b>Règle d'or</b> : soustraire, c'est ajouter l'opposé, et multiplier par un négatif <b>inverse l'ordre</b>.<br>":'';
+  return{q:`On sait que ${stX}${cy?` et ${stY}`:''}.<br>Encadre <b class="m">${P(s)}</b>.`,t:'set',a:`[${nstr(lo)};${nstr(hi)}]`,hint:'Intervalle fermé, ex. : [−0,6 ; 4,2]',traps,
+   sol:`${intro}Terme en x : ${tx.line}${cy?`<br>Terme en y : ${ty.line}`:''}<br>On ${c0?`ajoute ${m(c0)} et on `:''}additionne les bornes de même rang : ${tstr(lo)} ≤ ${P(s)} ≤ ${tstr(hi)}.`,skill:'Encadrement'}}}
+
+/* ----- 2. Intervalle <-> valeur absolue ----- */
+function mkAbsCR(frac,openMode){return function(){
+  let A,B,c,r,len;
+  if(!frac){const a=R(-9,3),b=a+2*R(1,6);A=String(a);B=String(b);c=String((a+b)/2);r=String((b-a)/2);len=String(b-a)}
+  else{const ia=R(-8,2),ib=ia+R(2,9);A=fr(ia,4);B=fr(ib,4);c=fr(ia+ib,8);r=fr(ib-ia,8);len=fr(ib-ia,4)}
+  const open=openMode===undefined?Math.random()<.5:openMode;const askC=Math.random()<.5;
+  const I=`${open?']':'['}${A};${B}${open?'[':']'}`;
+  return{q:`L'ensemble <b class="m">x ∈ ${P(I)}</b> s'écrit <b class="m">|x − c| ${open?'&lt;':'≤'} r</b>.<br>Quel est ${askC?'le centre <b class="m">c</b>':'le rayon <b class="m">r</b>'} ?`,
+   t:frac?'frac':'num',a:askC?c:r,hint:frac?'Fraction irréductible, ex. 1/8':'Un nombre, ex. 4',
+   traps:[{a:len,msg:askC?"Tu as pris la longueur b − a. Le centre est le <b>milieu</b> : (a + b) ÷ 2.":"b − a est la <b>longueur</b> de l'intervalle ; le rayon en est la moitié.",tag:'Valeur absolue'}],
+   sol:`Centre = milieu = (${P(A)} + ${P(B)}) ÷ 2 = ${PF(c)}.<br>Rayon = demi-longueur = (${P(B)} − (${P(A)})) ÷ 2 = ${PF(r)}.<br>Donc x ∈ ${P(I)} ⇔ |x − ${PF(c)}| ${open?'&lt;':'≤'} ${PF(r)}${open?' (crochets ouverts : inégalité stricte)':''}.`,skill:'Valeur absolue'}}}
+function absSign(){const open=Math.random()<.5,out=Math.random()<.5;const a=R(-9,0),b=a+2*R(1,6);const I=`${open?']':'['}${a};${b}${open?'[':']'}`;
+  const sym=!out?(open?'<':'≤'):(open?'≥':'>');
+  return{q:`<b class="m">x ${out?'∉':'∈'} ${P(I)}</b> s'écrit <b class="m">|x − c| ? r</b>, où c est le centre et r le rayon.<br>Quel symbole met-on à la place du « ? »`,
+   t:'choice',a:[sym],keys:['<','≤','>','≥'],sol:out?`x ∈ ${P(I)} ⇔ |x − c| ${open?'&lt;':'≤'} r. Le <b>contraire</b> de « ${open?'&lt;':'≤'} » est « ${sym} » : x ∉ ${P(I)} ⇔ |x − c| ${sym} r.`:`Crochets ${open?'ouverts : inégalité <b>stricte</b> (&lt;)':'fermés : inégalité <b>large</b> (≤)'}. « |x − c| ${open?'&lt;':'≤'} r » veut dire : x est à une distance ${open?'strictement ':''}inférieure ${open?'':'ou égale '}à r de c.`,skill:'Valeur absolue'}}
+function mkAbsComp(frac){return function(){
+  let A,B,c,r,len;
+  if(!frac){const a=R(-9,3),b=a+2*R(1,6);A=String(a);B=String(b);c=String((a+b)/2);r=String((b-a)/2);len=String(b-a)}
+  else{const ia=R(-8,2),ib=ia+R(2,9);A=fr(ia,4);B=fr(ib,4);c=fr(ia+ib,8);r=fr(ib-ia,8);len=fr(ib-ia,4)}
+  const open=Math.random()<.5,askC=Math.random()<.5;const I=`${open?']':'['}${A};${B}${open?'[':']'}`;const op=open?'≥':'>';
+  const L=len;
+  return{q:`On veut écrire <b class="m">x ∉ ${P(I)}</b> sous la forme <b class="m">|x − c| ${op} r</b>.<br>Quel est ${askC?'le centre <b class="m">c</b>':'le rayon <b class="m">r</b>'} ?`,
+   t:frac?'frac':'num',a:askC?c:r,hint:frac?'Fraction irréductible, ex. 1/8':'Un nombre, ex. 4',
+   traps:[{a:L,msg:askC?"Tu as pris la longueur b − a. Le centre est le <b>milieu</b> (a + b) ÷ 2.":"b − a est la longueur ; le rayon est sa moitié.",tag:'Valeur absolue'}],
+   sol:`x ∈ ${P(I)} ⇔ |x − ${PF(c)}| ${open?'&lt;':'≤'} ${PF(r)} (centre = milieu, rayon = demi-longueur).<br>Le contraire de « ${open?'&lt;':'≤'} » est « ${op} » : x ∉ ${P(I)} ⇔ |x − ${PF(c)}| ${op} ${PF(r)}.`,skill:'Valeur absolue'}}}
+function absBack(){
+  const C=R(-500,500),rs=[1,1,5,10,25,50,150];const r=pick(rs),open=Math.random()<.35;
+  const rtxt=r===1?'10<sup>−2</sup>':fmtD(r/100);const ctxt=fmtD(C/100);
+  const bound=v=>String(v/100);
+  const ans=`${open?']':'['}${bound(C-r)};${bound(C+r)}${open?'[':']'}`;
+  const form=C>=0?`|x − ${ctxt}|`:`|x + ${fmtD(-C/100)}|`;
+  return{q:`Écris l'ensemble des réels <b class="m">x</b> tels que <b class="m">${form} ${open?'&lt;':'≤'} ${rtxt}</b> sous forme d'intervalle.`,t:'set',a:ans,hint:KS_SET,
+   traps:[{a:`${open?']':'['}${bound(-C-r)};${bound(-C+r)}${open?'[':']'}`,msg:'Mauvais centre : |x − c| est la distance à c, donc le centre est c lui-même.',tag:'Valeur absolue'}],
+   sol:`${form} ${open?'&lt;':'≤'} ${rtxt} : x est à une distance ${open?'strictement ':''}inférieure ${open?'':'ou égale '}à ${fmtD(r/100)} du centre ${fmtD(C/100)}.<br>On va de ${fmtD((C-r)/100)} à ${fmtD((C+r)/100)}${open?', bornes exclues':', bornes incluses'}.`,skill:'Valeur absolue'}}
+
+/* ----- 3. Fonctions homographiques : image, antécédent, définition ----- */
+function mkHomog(){const a=RN(-9,9),mm=pick([2,3]),n=R(1,7);if(n===mm*a)return mkHomog();return{a,mm,n,fx:`<b class="m">f(x) = ${F(P(poly([1,a])),P(poly([mm,n])))}</b>`}}
+function mkImgAnte(mode){return function(){
+  const{a,mm,n,fx}=mkHomog();let t,wantImg;
+  do{t=RN(-5,6);wantImg=mode==='img'?true:mode==='ante'?false:Math.random()<.5}while(wantImg&&mm*t+n===0);
+  const img=fr(t+a,mm*t+n),ant=fr(t*n-a,1-mm*t);
+  const rap="<b>Rappel</b> : l'<b>image</b> de t, on <b>calcule</b> f(t). Un <b>antécédent</b> de t, on <b>résout</b> f(x) = t.";
+  if(wantImg)return{q:`Soit ${fx}. Calcule l'<b>image</b> de <b class="m">${m(t)}</b> par f.`,t:'frac',a:img,hint:'Fraction irréductible ou entier',traps:[{a:ant,msg:"Tu as résolu f(x) = "+m(t)+" : c'est la recherche d'un <b>antécédent</b>. L'image se calcule en remplaçant x par "+m(t)+".",tag:'Antécédents'}],
+    sol:`${rap}<br>f(${m(t)}) = ${F(`${m(t)} ${a<0?'−':'+'} ${Math.abs(a)}`,`${mm} × (${m(t)}) + ${n}`)} = ${F(t+a,mm*t+n)} = ${PF(img)}.`,skill:"Calcul d'images"};
+  return{q:`Soit ${fx}. Quel est l'<b>antécédent</b> de <b class="m">${m(t)}</b> par f ?`,t:'frac',a:ant,hint:'Fraction irréductible ou entier',traps:[{a:img,msg:"Tu as calculé f("+m(t)+") : c'est l'<b>image</b>. Pour un antécédent, il faut résoudre f(x) = "+m(t)+".",tag:'Antécédents'}],
+    sol:`${rap}<br>On résout f(x) = ${m(t)} : ${F(P(poly([1,a])),P(poly([mm,n])))} = ${m(t)} ⇔ ${P(poly([1,a]))} = ${m(t)}(${P(poly([mm,n]))}) ⇔ x ${m(-mm*t).startsWith('−')?'−':'+'} ${Math.abs(mm*t)}x = ${m(t*n-a)} ⇔ (${m(1-mm*t)})x = ${m(t*n-a)} ⇔ x = ${PF(ant)}.`,skill:'Antécédents'}}}
+function mkDomain(types){return function(){
+  const ty=pick(types);const hint='Réunion avec ∪, ex. : ]-∞ ; 2[ ∪ ]2 ; +∞[ (ℝ sur le clavier)';
+  if(ty==='lin'){const{a,mm,n}=mkHomog();const v=fr(-n,mm);
+    return{q:`Soit <b class="m">f(x) = ${F(P(poly([1,a])),P(poly([mm,n])))}</b>. Donne l'ensemble de définition de f.`,t:'set',a:`]-∞;${v}[∪]${v};+∞[`,hint,
+     traps:[{a:`]${v};+∞[`,msg:"Tu as oublié tout ce qui est à <b>gauche</b> de la valeur interdite : on retire seulement UN nombre à ℝ.",tag:'Ensemble de définition'},{a:`]-∞;${v}[`,msg:"Tu as oublié la partie à droite de la valeur interdite.",tag:'Ensemble de définition'}],
+     sol:`Le dénominateur ne doit pas être nul : ${P(poly([mm,n]))} = 0 ⇔ x = ${PF(v)}. On retire ce seul nombre à ℝ : D<sub>f</sub> = ℝ \\ {${P(v)}} = ]−∞ ; ${PF(v)}[ ∪ ]${PF(v)} ; +∞[.`,skill:'Ensemble de définition'}}
+  if(ty==='two'){let p=RN(-6,6),q=RN(-6,6);while(-q===p)q=RN(-6,6);const v1=Math.min(p,-q),v2=Math.max(p,-q);
+    return{q:`Soit <b class="m">f(x) = ${F('1',P(`(${poly([1,-p])})(${poly([1,q])})`))}</b>. Donne l'ensemble de définition de f.`,t:'set',a:`]-∞;${v1}[∪]${v1};${v2}[∪]${v2};+∞[`,hint,
+     traps:[{a:`]-∞;${v1}[∪]${v2};+∞[`,msg:"Il y a deux valeurs interdites : l'intervalle entre elles fait partie de l'ensemble de définition.",tag:'Ensemble de définition'}],
+     sol:`Un produit est nul si l'un des facteurs l'est : x = ${m(p)} ou x = ${m(-q)}. Ces deux nombres sont interdits : D<sub>f</sub> = ℝ \\ {${m(v1)} ; ${m(v2)}} = ]−∞ ; ${m(v1)}[ ∪ ]${m(v1)} ; ${m(v2)}[ ∪ ]${m(v2)} ; +∞[.`,skill:'Ensemble de définition'}}
+  if(ty==='sq'){const k=R(2,7);return{q:`Soit <b class="m">f(x) = ${F('3',P(poly([1,0,-k*k])))}</b>. Donne l'ensemble de définition de f.`,t:'set',a:`]-∞;${-k}[∪]${-k};${k}[∪]${k};+∞[`,hint,
+     traps:[{a:`]-∞;${-k}[∪]${k};+∞[`,msg:`x² − ${k*k} s'annule en ${-k} <b>et</b> en ${k} : ces deux valeurs sont interdites, mais l'intervalle entre elles est permis.`,tag:'Ensemble de définition'},{a:`]-∞;${k}[∪]${k};+∞[`,msg:`Il y a deux valeurs interdites : x = ${k} mais aussi x = ${-k}.`,tag:'Ensemble de définition'}],
+     sol:`x² − ${k*k} = 0 ⇔ x² = ${k*k} ⇔ x = ${-k} ou x = ${k}. D<sub>f</sub> = ℝ \\ {${-k} ; ${k}}.`,skill:'Ensemble de définition'}}
+  const k=R(1,9);return{q:`Soit <b class="m">f(x) = ${F('5',P(poly([1,0,k])))}</b>. Donne l'ensemble de définition de f.`,t:'set',a:'ℝ',hint:'ℝ sur le clavier, ou ]-∞ ; +∞[',traps:[{a:`]-∞;0[∪]0;+∞[`,msg:`Ici x² + ${k} ne s'annule jamais (un carré est positif, plus ${k} reste > 0) : aucune valeur interdite.`,tag:'Ensemble de définition'}],
+   sol:`x² + ${k} = 0 ⇔ x² = −${k}, impossible (un carré n'est jamais négatif). Le dénominateur ne s'annule jamais : D<sub>f</sub> = ℝ.`,skill:'Ensemble de définition'}}}
+
+/* ----- 4. Décimaux périodiques ----- */
+function mkPeriodic(cfg){return function(){
+  const I=cfg.I?R(0,3):0,A=cfg.A?R(1,1):0,L=pick(cfg.L);
+  let per;do{per=Array.from({length:L},()=>R(L===1?1:0,L===1?8:9)).join('')}while(L>1&&/^(.)\1*$/.test(per));
+  const pre=A?String(R(1,9)):'';const N0=String(I)+pre,N1=String(I)+pre+per;
+  const num=+N1-+N0,den=Math.pow(10,A)*(Math.pow(10,L)-1);const ans=fr(num,den);
+  const txt=`${I},${pre}${ovl(per)}`;const dec=`${N1}/${Math.pow(10,A+L)}`;
+  return{q:`Écris <b class="m">${txt}</b> sous la forme d'une <b>fraction irréductible</b>.`,t:'frac',a:ans,hint:'Fraction irréductible, ex. 7/12',
+   traps:[{a:dec,msg:"Ce nombre n'est pas décimal : ses chiffres se répètent sans fin, donc on ne peut pas l'écrire avec un dénominateur 10<sup>n</sup>. Utilise la méthode : multiplier puis soustraire.",tag:'Décimaux périodiques'}],
+   sol:`Pose x = ${txt}. On décale la virgule pour que la partie périodique soit la même dans les deux lignes :<br>${Math.pow(10,A+L)}x = ${+N1},${ovl(per)}<br>${A?Math.pow(10,A):''}x = ${+N0},${ovl(per)}<br>On soustrait : ${den}x = ${num}, donc x = ${PF(num+'/'+den)} = ${PF(ans)}.`,skill:'Décimaux périodiques'}}}
+
+/* ----- Le monde ----- */
+const E={
+ sum:mkEnc({cx:[1,1,2,3],cy:[1,1,2],xpos:true,ypos:false}),
+ neg1:mkEnc({cx:[-1,-2,-3,-4],c0:[0,0,3,5]}),
+ diff:mkEnc({cx:[1,2,3],cy:[-1,-1,-2,-3],xpos:true}),
+ mix:mkEnc({cx:[-3,-2,-1,1,2,5],cy:[-5,-3,-2,-1,1,2,3]}),
+ boss:mkEnc({cx:[-5,-4,-3,-2,2,3,5],cy:[-5,-4,-3,-2,2,3,4],c0:[0,0,1,-2,4]})
+};
+const REV_WORLD={id:'rev1126',name:'Série spéciale révision interro novembre 2026',chap:'Révision · Interro de novembre',color:'var(--w2)',glyph:'★',levels:[
+  {name:'Encadrer : sommes et opposés',kind:'easy',gens:[E.sum,E.sum,E.neg1,E.neg1]},
+  {name:'Centre, rayon, crochets',kind:'easy',gens:[mkAbsCR(false),mkAbsCR(false),absSign,absBack,mkAbsComp(false)]},
+  {name:'Image ou antécédent ?',kind:'hard',gens:[mkImgAnte('img'),mkImgAnte('ante'),mkImgAnte('mix'),mkDomain(['lin']),mkDomain(['lin','none'])]},
+  {name:'Soustraire sans se tromper',kind:'hard',gens:[E.diff,E.diff,E.mix,mkAbsCR(true),mkAbsComp(true),mkPeriodic({I:false,A:false,L:[1,2]}),mkPeriodic({I:true,A:false,L:[3]})]},
+  {name:"Le Maître de l'Interro",kind:'boss',gens:[E.boss,E.boss,E.mix,mkImgAnte('mix'),mkDomain(['two','sq','lin']),mkAbsComp(true),mkAbsCR(true),mkPeriodic({I:true,A:true,L:[1,2]}),absBack,mkImgAnte('mix')]}]};
+WORLDS.push(REV_WORLD);
+
+/* =====================================================================
    CATALOGUE, MOTEUR ET ANALYSE (sans DOM : testable)
    ===================================================================== */
 ['ens','arith','calc','fonc'].forEach((id,i)=>{WORLDS[i].id=id});
