@@ -365,6 +365,17 @@ const nrm=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ
 function topLevelSum(raw){const s=norm0(raw);let d=0;for(let i=0;i<s.length;i++){const c=s[i];if(c==='(')d++;else if(c===')')d--;else if(d===0&&(c==='+'||c==='-')&&i>0&&!'(*^/'.includes(s[i-1]))return true}return false}
 
 /* ----- vérification d'une réponse ----- */
+function notFull(raw){const s=norm0(raw);const gs=[];let d=0,st=-1;
+  for(let i=0;i<s.length;i++){if(s[i]==='('){if(d===0)st=i;d++}else if(s[i]===')'){d--;if(d===0&&st>=0)gs.push(s.slice(st,i+1))}}
+  for(const g of gs){let f;try{f=parseExpr(g)}catch(e){continue}
+    const c=f(0),p1=f(1),m1=f(-1),a=(p1+m1)/2-c,b=(p1-m1)/2;
+    if(Math.abs(f(2)-(4*a+2*b+c))>1e-9)continue;
+    if(![a,b,c].every(v=>Math.abs(v-Math.round(v))<1e-9))continue;
+    const A=Math.round(a),B=Math.round(b),C=Math.round(c);if(A===0&&B===0)continue;
+    if(C===0)return 'x';const g0=gcd(gcd(A,B),C);if(g0>1)return String(g0);
+    const sq=v=>v>0&&Math.abs(Math.sqrt(v)-Math.round(Math.sqrt(v)))<1e-9;
+    if(A>0&&sq(A)&&((B===0&&C<0&&sq(-C))||(C>0&&sq(C)&&B*B===4*A*C)))return 'id'}
+  return null}
 const EQ={num:(u,e)=>eqNum(valN(u),valN(e)),frac:(u,e)=>eqNum(valN(u),valN(e)),rad:(u,e)=>eqNum(valN(u),valN(e)),expr:eqExpr,set:eqSet,list:eqList,pt:eqPt};
 function check(q,raw){
   raw=String(raw||'').trim();
@@ -384,6 +395,7 @@ function check(q,raw){
   if(ok){
     if(q.t==='expr'&&q.form==='dev'&&/\(/.test(raw))return{ok:false,msg:"Le résultat est juste, mais il n'est pas développé : il reste des parenthèses.",tag:'Forme attendue'};
     if(q.t==='expr'&&q.form==='fact'&&(!/\(/.test(raw)||topLevelSum(raw)))return{ok:false,msg:"Le résultat est juste, mais il n'est pas factorisé : on attend un produit.",tag:'Forme attendue'};
+    if(q.t==='expr'&&q.form==='fact'&&q.full){const nf=notFull(raw);if(nf)return{ok:false,msg:nf==='id'?"Le résultat est juste, mais pas complètement factorisé : une parenthèse est encore une identité remarquable (a² − b² ou (a ± b)²). Factorise-la aussi.":`Le résultat est juste, mais pas complètement factorisé : il reste encore un facteur commun (${nf}) dans une parenthèse. Mets-le devant.`,tag:nf==='id'?'Factorisation':'Facteur commun'}}
     if(q.t==='frac'){const s=norm0(raw).replace(/[()]/g,'');const k=s.match(/^(-?)(\d+)(?:\/(-?)(\d+))?$/);
       if(!k)return{ok:false,msg:'Le résultat est juste, mais donne-le sous forme de fraction irréductible.',tag:'Fractions'};
       if(k[4]&&(gcd(+k[2],+k[4])!==1||+k[4]===1))return{ok:false,msg:"La fraction est juste mais pas irréductible : simplifie encore.",tag:'Fractions'}}
@@ -515,7 +527,33 @@ const W3={
  b5(){const b=R(2,6),d=R(2,6),f=R(2,6),a=R(1,9),c=R(1,6),e=R(1,6);const ans=fr(a*d*f-b*c*e,b*d*f);return{q:`Calcule et donne le résultat sous forme irréductible : ${F(a,b)} − ${F(c,d)} × ${F(e,f)}`,t:'frac',a:ans,hint:'Ex. : −7/12',traps:[{a:fr((a*d-c*b)*e,b*d*f),msg:"La multiplication est prioritaire sur la soustraction.",tag:'Priorités opératoires'}],sol:`On calcule d'abord le produit : ${F(c,d)} × ${F(e,f)} = ${PF(fr(c*e,d*f))}.<br>Puis ${F(a,b)} − ${PF(fr(c*e,d*f))} = ${PF(ans)}.`,skill:'Fractions'}},
  b6(){const k=R(2,6),s=pick([2,3,5,6,7]);const n=k*k*s;return{q:`Écris <b class="m">√${n}</b> sous la forme a√b, avec b le plus petit possible.`,t:'rad',a:`${k}√${s}`,hint:'Ex. : 5√2',sol:`${n} = ${k*k} × ${s}, donc √${n} = √${k*k} × √${s} = ${k}√${s}.`,skill:'Racines carrées'}},
  b7(){const a=R(2,6),b=R(2,4);return{q:`Calcule : <span class="m">−${a}² + (−${b})³</span>`,t:'num',a:String(-a*a+(-b)**3),traps:[{a:String(a*a+(-b)**3),msg:`−${a}² = −${a*a} : le carré ne porte que sur ${a}. C'est (−${a})² qui vaut ${a*a}.`,tag:'Puissances'},{a:String(-a*a+b**3),msg:`(−${b})³ est négatif : un nombre négatif à une puissance impaire reste négatif.`,tag:'Puissances'}],sol:`−${a}² = −${a*a} ; (−${b})³ = −${b**3}. Total : ${m(-a*a+(-b)**3)}.`,skill:'Puissances'}},
- b8(){const k=pick([2,3,-2]),e=R(2,4),p=pick([2,3]);const exF=`(${k}x^${e})^${p}`;return{q:`Simplifie : ${mx(exF)}`,t:'expr',a:`${k**p}x^${e*p}`,show:P(`${k**p}x^${e*p}`),traps:[{a:`${k}x^${e*p}`,msg:`Le coefficient ${m(k)} est aussi élevé à la puissance ${p}.`,tag:'Puissances'},{a:`${k**p}x^${e+p}`,msg:"(x^m)^p = x^(m×p) : on multiplie les exposants.",tag:'Puissances'}],sol:`(${m(k)})<sup>${p}</sup> = ${m(k**p)} et (x<sup>${e}</sup>)<sup>${p}</sup> = x<sup>${e*p}</sup>.`,skill:'Puissances'}}
+ b8(){const k=pick([2,3,-2]),e=R(2,4),p=pick([2,3]);const exF=`(${k}x^${e})^${p}`;return{q:`Simplifie : ${mx(exF)}`,t:'expr',a:`${k**p}x^${e*p}`,show:P(`${k**p}x^${e*p}`),traps:[{a:`${k}x^${e*p}`,msg:`Le coefficient ${m(k)} est aussi élevé à la puissance ${p}.`,tag:'Puissances'},{a:`${k**p}x^${e+p}`,msg:"(x^m)^p = x^(m×p) : on multiplie les exposants.",tag:'Puissances'}],sol:`(${m(k)})<sup>${p}</sup> = ${m(k**p)} et (x<sup>${e}</sup>)<sup>${p}</sup> = x<sup>${e*p}</sup>.`,skill:'Puissances'}},
+ fcom1(){let k=R(1,6),p=R(1,6),q;do q=RN(-7,7);while(gcd(p,q)!==1);const s=Math.random()<.3?-1:1;const E=poly([s*k*p,s*k*q,0]);const kk=s*k;const ans=`${kk===1?'':kk===-1?'-':kk}x(${poly([p,q])})`;
+  return{q:`Factorise complètement : ${mx(E)}`,t:'expr',form:'fact',full:true,a:ans,traps:[],hint:'Un produit, avec le facteur commun devant',
+   sol:`Cherche ce qui est présent dans <b>chaque</b> terme : la lettre x${k>1?` et le nombre ${k} (plus grand diviseur commun de ${Math.abs(s*k*p)} et ${Math.abs(s*k*q)})`:''}.<br>${P(E)} = ${P(`${kk===1?'':kk===-1?'-':kk}x`)} × (${P(poly([p,0]))}) ${q<0?'−':'+'} ${P(`${kk===1?'':kk===-1?'-':kk}x`)} × ${Math.abs(q)} = ${P(ans)}.<br>Vérifie en redéveloppant.`,skill:'Facteur commun'}},
+ fcom2(){const k=R(2,9),p=R(1,5);let q;do q=RN(-9,9);while(gcd(p,q)!==1);const E=poly([k*p,k*q]);
+  return{q:`Factorise complètement : ${mx(E)}`,t:'expr',form:'fact',full:true,a:`${k}(${poly([p,q])})`,traps:[],hint:'Un produit, avec le facteur commun devant',
+   sol:`Plus grand diviseur commun de ${k*p} et ${Math.abs(k*q)} : ${k}.<br>${P(E)} = ${k} × (${P(poly([p,q]))}). Si tu as mis un facteur plus petit, il reste encore un facteur commun dans la parenthèse.`,skill:'Facteur commun'}},
+ fcom3(){const p=R(1,3),a=RN(-6,6),q=RN(-4,4),r=RN(-4,4),b=RN(-6,6),c=RN(-6,6);if(q+r===0||(b+c===0&&q+r===0))return W3.fcom3();
+  const A=poly([p,a]);const E=`(${A})(${poly([q,b])})+(${A})(${poly([r,c])})`;
+  return{q:`Factorise : ${mx(E)}`,t:'expr',form:'fact',a:`(${A})(${poly([q+r,b+c])})`,traps:[],
+   sol:`Le facteur commun est la parenthèse (${P(A)}).<br>(${P(A)})[(${P(poly([q,b]))}) + (${P(poly([r,c]))})] = (${P(A)})(${P(poly([q+r,b+c]))}).`,skill:'Facteur commun'}},
+ fhid(){const p=R(1,3),a=RN(-6,6),q=RN(-4,4),b=RN(-6,6);const A=poly([p,a]),B=poly([q,b]);
+  if(Math.random()<.5)return{q:`Factorise : ${mx(`(${A})(${B})+(${A})`)}`,t:'expr',form:'fact',a:`(${A})(${poly([q,b+1])})`,traps:[{a:`(${A})(${B})`,msg:`Le 2ᵈ terme (${P(A)}) est (${P(A)}) × 1 : une fois le facteur commun sorti, il reste <b>1</b>, pas 0.`,tag:'Facteur commun'}],
+    sol:`Écris (${P(A)}) = (${P(A)}) × 1 pour voir le facteur commun.<br>(${P(A)})(${P(B)}) + (${P(A)}) × 1 = (${P(A)})[(${P(B)}) + 1] = (${P(A)})(${P(poly([q,b+1]))}).`,skill:'Facteur commun'};
+  let p2=p;let q2=q;if(q2===p2)q2=p2+RN(1,3);const B2=poly([q2,b]);
+  return{q:`Factorise : ${mx(`(${A})^2-(${A})(${B2})`)}`,t:'expr',form:'fact',a:`(${A})(${poly([p-q2,a-b])})`,traps:[{a:`(${A})(${poly([p-q2,a+b])})`,msg:`Le moins devant (${P(B2)}) change le signe de <b>tous</b> ses termes, y compris ${m(b)}.`,tag:'Signe moins devant une parenthèse'}],
+   sol:`(${P(A)})² = (${P(A)})(${P(A)}). Facteur commun (${P(A)}) :<br>(${P(A)})[(${P(A)}) − (${P(B2)})] = (${P(A)})(${P(poly([p,a]))} ${P(poly([-q2,-b]))}) = (${P(A)})(${P(poly([p-q2,a-b]))}).`,skill:'Facteur commun'}},
+ fdiff1(){const a=RN(-7,7),b=R(1,9);const E=`(${poly([1,a])})^2-${b*b}`;
+  return{q:`Factorise : ${mx(E)}`,t:'expr',form:'fact',a:`(${poly([1,a-b])})(${poly([1,a+b])})`,traps:[{a:`(${poly([1,a-b])})^2`,msg:"A² − B² = (A − B)(A + B), et non (A − B)².",tag:'Factorisation'}],
+   sol:`${b*b} = ${b}², donc on a A² − B² avec A = ${P(poly([1,a]))} et B = ${b}.<br>(A − B)(A + B) = (${P(poly([1,a]))} − ${b})(${P(poly([1,a]))} + ${b}) = (${P(poly([1,a-b]))})(${P(poly([1,a+b]))}).`,skill:'Factorisation'}},
+ fdiff2(){const p=R(1,4);let q;do q=R(1,4);while(q===p);const a=RN(-6,6),b=RN(-6,6);const A=poly([p,a]),B=poly([q,b]);
+  return{q:`Factorise : ${mx(`(${A})^2-(${B})^2`)}`,t:'expr',form:'fact',a:`(${poly([p-q,a-b])})(${poly([p+q,a+b])})`,traps:[{a:`(${poly([p-q,a+b])})(${poly([p+q,a+b])})`,msg:`Dans A − B, le moins s'applique à tous les termes de B : A − B = ${P(A)} − (${P(B)}) = ${P(poly([p-q,a-b]))}.`,tag:'Signe moins devant une parenthèse'}],
+   sol:`A = ${P(A)} et B = ${P(B)}. A² − B² = (A − B)(A + B).<br>A − B = ${P(A)} − (${P(B)}) = ${P(poly([p-q,a-b]))} ; A + B = ${P(poly([p+q,a+b]))}.`,skill:'Factorisation'}},
+ fdouble(){const k=R(2,6),a=R(1,6);return{q:`Factorise complètement : ${mx(poly([k,0,-k*a*a]))}`,t:'expr',form:'fact',full:true,a:`${k}(${poly([1,-a])})(${poly([1,a])})`,traps:[{a:`${k}(${poly([1,-a])})^2`,msg:"x² − a² = (x − a)(x + a), et non (x − a)².",tag:'Factorisation'}],
+   sol:`D'abord le facteur commun ${k} : ${P(poly([k,0,-k*a*a]))} = ${k}(${P(poly([1,0,-a*a]))}). Puis x² − ${a*a} = x² − ${a}² = (x − ${a})(x + ${a}).<br>Résultat : ${k}(${P(poly([1,-a]))})(${P(poly([1,a]))}).`,skill:'Facteur commun'}},
+ fcomb(){const k=R(2,5),a=R(1,7),s=pick([1,-1]);return{q:`Factorise complètement : ${mx(poly([k,2*k*s*a,k*a*a]))}`,t:'expr',form:'fact',full:true,a:`${k}(${poly([1,s*a])})^2`,traps:[{a:`${k}(${poly([1,-s*a])})^2`,msg:"Le signe dans la parenthèse est celui du terme en x.",tag:'Factorisation'}],
+   sol:`Facteur commun ${k} : ${k}(${P(poly([1,2*s*a,a*a]))}). Dans la parenthèse : x² ${s>0?'+':'−'} ${2*a}x + ${a*a} = (x ${s>0?'+':'−'} ${a})².<br>Résultat : ${k}(${P(poly([1,s*a]))})².`,skill:'Facteur commun'}},
 };
 
 /* ---------- Monde 4 : fonctions ---------- */
@@ -562,10 +600,10 @@ const WORLDS=[
   {name:'Le Golem Premier',kind:'boss',gens:[W2.dec,W2.pgcd,W2.irr,W2.prime3,W2.nbDiv,W2.bouquets,W2.vf,W2.parity,W2.prime3,W2.smallDiv]}]},
  {name:'Calcul littéral',chap:'Chapitre 3',color:'var(--w3)',glyph:'(±)',levels:[
   {name:'Fractions et puissances',kind:'easy',gens:[W3.fracAdd,W3.fracMul,W3.fracDiv,W3.pow]},
-  {name:'Développer',kind:'easy',gens:[W3.dev1,W3.dev2,W3.dev3,W3.dev4]},
-  {name:'Identités remarquables',kind:'hard',gens:[W3.id1,W3.id2,W3.id3,W3.fact1,W3.fact2]},
-  {name:'Le signe moins',kind:'hard',gens:[W3.neg1,W3.neg2,W3.neg3,W3.neg4,W3.neg5]},
-  {name:"L'Hydre du Signe Moins",kind:'boss',gens:[W3.b1,W3.b2,W3.b3,W3.b4,W3.b5,W3.b6,W3.b7,W3.b8,W3.neg3,W3.neg1]}]},
+  {name:'Développer et factoriser',kind:'easy',gens:[W3.dev1,W3.dev2,W3.dev3,W3.dev4,W3.fcom2,W3.fcom1]},
+  {name:'Identités remarquables',kind:'hard',gens:[W3.id1,W3.id2,W3.id3,W3.fact1,W3.fact2,W3.fdiff1,W3.fcomb,W3.fcom1]},
+  {name:'Le signe moins',kind:'hard',gens:[W3.neg1,W3.neg2,W3.neg3,W3.neg4,W3.neg5,W3.fcom3,W3.fhid]},
+  {name:"L'Hydre du Signe Moins",kind:'boss',gens:[W3.b1,W3.b2,W3.b3,W3.b4,W3.b5,W3.b6,W3.b7,W3.b8,W3.neg3,W3.neg1,W3.fdiff2,W3.fhid,W3.fdouble]}]},
  {name:'Fonctions',chap:'Chapitre 9',color:'var(--w4)',glyph:'f(x)',levels:[
   {name:'Images',kind:'easy',gens:[W4.img1,W4.img2,W4.onCurve]},
   {name:'Antécédents',kind:'easy',gens:[W4.ante1,W4.ante2]},
